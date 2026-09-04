@@ -1,0 +1,13 @@
+# Nada de la app de escritorio viaja al despliegue web.
+dist/
+release/
+release-v2/
+build/
+scripts/
+src/desktop/
+src/tools/
+src/index.ts
+publicacion/
+.claude/
+.env
+*.log

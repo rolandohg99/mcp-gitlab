@@ -1,0 +1,547 @@
+/* =============================================================================
+   Panel GitLab SIGO — sistema de diseño
+   Hoja única compartida por el panel, el login OAuth y la pantalla de token,
+   para que las tres pantallas no repitan estilos ni se desincronicen.
+
+   Paleta y tipografía derivadas de las recomendaciones para "Productivity Tool"
+   + "Analytics Dashboard": jerarquía clara, color con significado funcional,
+   claridad por encima de la estética.
+   ============================================================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  /* --- superficies -------------------------------------------------------
+     Gris neutro cálido, no azul marino. Nunca negro puro: #000 sobre OLED
+     produce bordes duros y hace que las sombras desaparezcan.              */
+  --bg: #050506;
+  --surface: #0e0e12;
+  --surface-2: #16161c;
+  --surface-3: #1e1e26;
+
+  /* --- texto (verificado sobre --surface) ------------------------------- */
+  --text: #ededef;        /* 16.5:1 */
+  --text-muted: #8a8f98;  /*  5.9:1 */
+
+  /* --- bordes -------------------------------------------------------------
+     Blanco translúcido en vez de un gris opaco: se integra con cualquier
+     superficie y da la sensación de vidrio en lugar de caja.               */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  /* --- color funcional ----------------------------------------------------
+     El acento se parte en dos: el sólido (#5e6ad2) solo vale de fondo —da
+     4.1:1, por debajo del mínimo—, así que el texto usa la variante clara. */
+  --primary: #8b95f0;        /*  7.0:1  texto, iconos, enlaces */
+  --primary-solid: #5e6ad2;  /*  fondo de botón; blanco encima 4.7:1 */
+  --primary-hover: #6d78e0;
+  --primary-glow: rgba(94, 106, 210, 0.22);
+  --success: #3fd68c;        /* 10.3:1 */
+  --warning: #f5b544;        /* 10.6:1 */
+  --danger: #ff6b6b;         /*  6.9:1 */
+  --danger-solid: #e03e3e;
+  --info: #4fc3f7;           /*  9.6:1 */
+
+  --primary-soft: rgba(94, 106, 210, 0.14);
+  --success-soft: rgba(63, 214, 140, 0.12);
+  --warning-soft: rgba(245, 181, 68, 0.12);
+  --danger-soft: rgba(255, 107, 107, 0.12);
+
+  /* --- tipografía --- */
+  --font: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui,
+    -apple-system, sans-serif;
+  --font-mono: "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+
+  /* --- espaciado --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* --- forma: radios amplios, la señal visual de una interfaz actual --- */
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 18px;
+  --radius-full: 999px;
+
+  /* --- elevación: sombra + un borde superior claro que simula luz cenital */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 24px 56px rgba(0, 0, 0, 0.65);
+
+  /* --- movimiento: expo.out, la curva que hace que algo "aterrice" --- */
+  --t-fast: 120ms;
+  --t: 200ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --tap: 44px;
+
+  color-scheme: dark;
+}
+
+/* =========================== base ========================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Nunca se desactiva el zoom: es un ajuste de accesibilidad del usuario. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  /* Ningún elemento debe empujar la página a lo ancho. */
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background: radial-gradient(
+    900px 520px at 12% -6%,
+    rgba(94, 106, 210, 0.12),
+    transparent 62%
+  );
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: var(--leading-tight);
+  font-weight: 600;
+}
+
+a {
+  color: var(--primary);
+}
+
+/* Foco visible y consistente en todo lo enfocable. Se usa :focus-visible para
+   no molestar al ratón, pero nunca se elimina el indicador del teclado. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Respeta a quien pidió menos movimiento en su sistema operativo. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* =========================== controles ==================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--surface-3);
+  border-color: var(--primary);
+}
+
+.btn:active:not(:disabled) {
+  background: var(--surface-2);
+  transform: translateY(1px);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary-solid);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 0 0 1px var(--primary-solid), 0 4px 16px var(--primary-glow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+/* Botón sólo icono: sigue midiendo 44px aunque el icono sea pequeño. */
+.btn-icon {
+  min-width: var(--tap);
+  padding: 0;
+}
+
+.btn-sm {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+}
+
+/* Con dedo, ningún control baja de 44px aunque sea "pequeño" en escritorio. */
+@media (pointer: coarse), (max-width: 720px) {
+  .btn-sm,
+  select.btn-sm {
+    min-height: var(--tap) !important;
+  }
+}
+
+.field {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  transition: border-color var(--t-fast) var(--ease);
+}
+
+.field:hover {
+  border-color: var(--primary);
+}
+
+textarea.field {
+  padding: var(--space-3);
+  min-height: 96px;
+}
+
+.field-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+select.field {
+  /* Sin esto, el select nativo hereda el fondo del sistema en algunos temas. */
+  appearance: none;
+  padding-right: var(--space-6);
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: right 18px center, right 13px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* =========================== superficies ================================== */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  /* Imprescindible dentro de grid/flex: sin esto el contenido ancho empuja
+     el contenedor y aparece scroll horizontal en móvil. */
+  min-width: 0;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.card-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.card-count {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-body {
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* =========================== listas ======================================= */
+
+.item {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--t-fast) var(--ease);
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+.item:hover {
+  background: var(--surface-2);
+}
+
+.item-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  margin-bottom: var(--space-1);
+}
+
+.item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.item-meta .sep {
+  opacity: 0.5;
+}
+
+/* =========================== badges ======================================= */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.badge-scope {
+  color: var(--primary);
+  border-color: #2c4270;
+  background: var(--primary-soft);
+}
+
+.badge-success {
+  color: var(--success);
+  border-color: #2a5c42;
+  background: var(--success-soft);
+}
+.badge-danger {
+  color: var(--danger);
+  border-color: #6b3030;
+  background: var(--danger-soft);
+}
+.badge-warning {
+  color: var(--warning);
+  border-color: #6b5320;
+  background: var(--warning-soft);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+/* =========================== alertas ====================================== */
+
+.alert {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+  font-size: var(--text-sm);
+}
+
+.alert-danger {
+  background: var(--danger-soft);
+  border-color: #6b3030;
+  color: #fecaca;
+}
+
+.alert-warning {
+  background: var(--warning-soft);
+  border-color: #6b5320;
+  color: #fde68a;
+}
+
+.alert-success {
+  background: var(--success-soft);
+  border-color: #2a5c42;
+  color: #bbf7d0;
+}
+
+/* =========================== estados ======================================
+   Vacío y cargando son cosas distintas y se ven distintas: uno es una
+   respuesta ("no hay nada"), el otro una espera.                            */
+
+.empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.empty-title {
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: var(--space-1);
+}
+
+.skeleton {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.skeleton-line {
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-3) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: brillo 1.4s ease-in-out infinite;
+}
+
+.skeleton-line + .skeleton-line {
+  margin-top: var(--space-2);
+}
+
+.skeleton-line.corta {
+  width: 45%;
+}
+
+@keyframes brillo {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Spinner para botones ocupados. */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: girar 0.7s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================== utilidades =================================== */
+
+.stack {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.row-flex {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cualquier bloque ancho (tabla, gráfico) se desplaza dentro de su caja,
+   nunca arrastra la página. */
+.scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
+}

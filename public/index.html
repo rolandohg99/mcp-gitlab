@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel de desarrollo SIGO</title>
+<link rel="stylesheet" href="/app.css">
+<style>
+  /* ---- estructura de la página ---- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .brand h1 { font-size: var(--text-md); white-space: nowrap; }
+  .marca-tri {
+    width: 0; height: 0; flex: none;
+    border-left: 8px solid transparent; border-right: 8px solid transparent;
+    border-top: 14px solid #e24329;
+  }
+  .quien {
+    color: var(--text-muted); font-size: var(--text-sm);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  main { padding: var(--space-5) var(--space-4) var(--space-7); max-width: 1560px; margin: 0 auto; }
+
+  /* ---- KPIs ----
+     min(100%, 150px) evita que la columna mínima exceda el ancho del móvil. */
+  .kpis {
+    display: grid; gap: var(--space-3); margin-bottom: var(--space-5);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr));
+  }
+  .kpi {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--space-4); min-width: 0;
+  }
+  .kpi-n { font-size: var(--text-xl); font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .kpi-l { color: var(--text-muted); font-size: var(--text-xs); margin-top: var(--space-1); }
+  .kpi-alerta .kpi-n { color: var(--warning); }
+
+  .ancho-total { grid-column: 1 / -1; }
+  .filtro {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    font-size: var(--text-xs); color: var(--text-muted); cursor: pointer;
+    min-height: var(--tap); padding: 0 var(--space-1);
+  }
+  .filtro input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+  /* Un fallo de 2019 no es una alerta: se lista, pero atenuado. */
+  .item.antiguo { opacity: .5; }
+  .item.antiguo:hover { opacity: 1; }
+
+  /* Rejilla de tarjetas por carpeta. NO usar `columns`: con altura limitada
+     desborda hacia la derecha y deja filas inalcanzables. */
+  #pipelines {
+    display: grid; gap: var(--space-3); padding: var(--space-3);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    align-items: start; max-height: none;
+  }
+  .grupo {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; min-width: 0;
+  }
+  .grupo-head {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border);
+    font-size: var(--text-xs); font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .grupo-head > span:not(.punto-estado):not(.spacer) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .grupo-head .cuenta { color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; flex: none; }
+  .grupo-head .punto-estado {
+    width: 8px; height: 8px; border-radius: 50%; flex: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
+  }
+  /* Una carpeta con muchos repos scrollea dentro de su tarjeta, no fuera. */
+  .grupo-lista { max-height: 340px; overflow-y: auto; overscroll-behavior: contain; }
+  .grid {
+    display: grid; gap: var(--space-4); align-items: start;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  }
+
+  /* ---- panel de horas ---- */
+  .horas-tot { display: flex; gap: var(--space-4); align-items: baseline; flex-wrap: wrap; }
+  .horas-tot .big { font-size: var(--text-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .horas-tot .sub { color: var(--text-muted); font-size: var(--text-xs); }
+  .dias { display: flex; gap: var(--space-2); align-items: flex-end; padding: var(--space-3) var(--space-4) 0; height: 168px; }
+  .dia {
+    flex: 1 0 44px; min-width: 44px;            /* 44px: mínimo táctil */
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    height: 100%; background: none; border: 0; padding: 0; cursor: pointer;
+    border-radius: var(--radius-sm);
+  }
+  .dia .col { width: 100%; background: rgba(255,255,255,.04); border-radius: var(--radius-sm) var(--radius-sm) 0 0; display: flex; align-items: flex-end; height: 100%; }
+  .dia .colfill { width: 100%; border-radius: var(--radius-sm) var(--radius-sm) 0 0; background: var(--success); min-height: 3px; transition: filter var(--t-fast) var(--ease); }
+  .dia:hover .colfill { filter: brightness(1.15); }
+  .dia.parcial .colfill { background: var(--warning); }
+  /* Día laborable sin registrar: rayado rojo, imposible de confundir con un finde. */
+  .dia.vacio .col { border: 1px dashed #6b3a3a; background: repeating-linear-gradient(45deg, var(--danger-soft) 0 5px, transparent 5px 10px); }
+  .dia.vacio .colfill { background: none; }
+  .dia.finde .col { opacity: 0.28; }
+  .dia.finde .colfill { background: none; }
+  .dia[aria-pressed="true"] .col { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .dia .h { font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-1); font-variant-numeric: tabular-nums; }
+  .dia .d { font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-2); white-space: nowrap; }
+  .dia.hoy .d { color: var(--primary); font-weight: 600; }
+  .leyenda { padding: var(--space-2) var(--space-4) var(--space-3); font-size: var(--text-xs); color: var(--text-muted); display: flex; gap: var(--space-4); flex-wrap: wrap; }
+  .leyenda span { display: inline-flex; align-items: center; gap: var(--space-1); }
+  .muestra { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  /* ---- barras de bugs ---- */
+  .bars { padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-2); }
+  .bar { display: grid; grid-template-columns: minmax(96px, 130px) 1fr 40px; gap: var(--space-3); align-items: center; font-size: var(--text-xs); }
+  .bar a { color: var(--text-muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar a:hover { color: var(--primary); }
+  .track { background: var(--surface-2); border-radius: var(--radius-full); height: 8px; overflow: hidden; }
+  .fill { background: var(--primary); height: 100%; border-radius: var(--radius-full); }
+  .bar .v { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ---- notificaciones ---- */
+  .campana-wrap { position: relative; }
+  #badge {
+    position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px;
+    background: var(--danger-solid); color: #fff; border-radius: var(--radius-full);
+    font-size: 10px; font-weight: 700; line-height: 18px; text-align: center;
+    padding: 0 4px; border: 2px solid var(--surface); box-sizing: content-box;
+  }
+  #panel-avisos {
+    position: absolute; top: calc(100% + var(--space-2)); right: 0;
+    width: 400px; max-width: calc(100vw - var(--space-4) * 2);
+    background: var(--surface-2); border: 1px solid var(--border-strong);
+    border-radius: var(--radius); box-shadow: var(--shadow-lg); z-index: 40; overflow: hidden;
+  }
+  .avisos-head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+  #lista-avisos { max-height: min(460px, 60vh); overflow-y: auto; overscroll-behavior: contain; }
+  .aviso-item { display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); color: inherit; text-decoration: none; }
+  .aviso-item:last-child { border-bottom: 0; }
+  .aviso-item:hover { background: var(--surface-3); }
+  .aviso-item.no-leido { background: var(--primary-soft); }
+  .aviso-item.no-leido:hover { background: #1b2b4d; }
+  .aviso-ico { flex: none; width: 28px; height: 28px; border-radius: var(--radius-sm); background: var(--surface-3); display: flex; align-items: center; justify-content: center; }
+  .aviso-ico svg { width: 15px; height: 15px; }
+  .aviso-cuerpo { min-width: 0; flex: 1; }
+  .aviso-titulo { font-size: var(--text-sm); font-weight: 600; margin-bottom: 2px; }
+  .aviso-texto { font-size: var(--text-xs); color: var(--text-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .aviso-fecha { font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1); opacity: 0.8; }
+  .punto { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); margin-top: 10px; }
+
+  /* Colores del icono según el tipo de aviso: el color transporta significado. */
+  .t-issue   { color: var(--primary); }
+  .t-todo    { color: var(--info); }
+  .t-mr      { color: var(--success); }
+  .t-pipe    { color: var(--danger); }
+  .t-horas   { color: var(--warning); }
+  .t-desp    { color: var(--info); }
+  .t-update  { color: var(--info); }
+
+  /* ---- responsive ---- */
+  @media (max-width: 720px) {
+    main { padding: var(--space-4) var(--space-3) var(--space-6); }
+    .topbar { padding: var(--space-3); }
+    .quien, .sello { display: none; }   /* el nombre y la hora no caben ni aportan aquí */
+    .card-body { max-height: 340px; }
+    .card-head { row-gap: var(--space-2); }
+    .horas-tot { width: 100%; gap: var(--space-3); }
+    .horas-tot .big { font-size: var(--text-md); }
+    #panel-avisos { position: fixed; top: 60px; left: var(--space-3); right: var(--space-3); width: auto; max-width: none; }
+  }
+  @media (max-width: 400px) {
+    .brand h1 { font-size: var(--text-base); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Iconos como SVG, no emoji: escalan, heredan color y no dependen de la
+     fuente de emoji del sistema. -->
+<svg class="visually-hidden" aria-hidden="true">
+  <symbol id="i-issue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+  </symbol>
+  <symbol id="i-todo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+  </symbol>
+  <symbol id="i-mr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 009 9"/>
+  </symbol>
+  <symbol id="i-pipe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>
+  </symbol>
+  <symbol id="i-horas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+  </symbol>
+  <symbol id="i-update" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 19V5M5 12l7-7 7 7"/>
+  </symbol>
+  <symbol id="i-campana" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/>
+  </symbol>
+  <symbol id="i-desp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+    <path d="M3.3 7L12 12l8.7-5M12 22V12"/>
+  </symbol>
+  <symbol id="i-salir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>
+  </symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6"/>
+  </symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="marca-tri" aria-hidden="true"></span>
+    <h1>Panel de desarrollo SIGO</h1>
+  </div>
+  <span class="quien" id="who">Cargando…</span>
+  <span class="spacer"></span>
+  <span class="quien sello" id="stamp"></span>
+
+  <span class="campana-wrap">
+    <button id="campana" class="btn btn-icon" aria-expanded="false" aria-haspopup="true"
+            aria-controls="panel-avisos" aria-label="Notificaciones">
+      <svg width="18" height="18" aria-hidden="true"><use href="#i-campana"/></svg>
+      <span id="badge" hidden aria-hidden="true">0</span>
+    </button>
+    <div id="panel-avisos" role="dialog" aria-label="Notificaciones" hidden>
+      <div class="avisos-head">
+        <strong class="card-title">Notificaciones</strong>
+        <span class="spacer"></span>
+        <button id="marcar-leidas" class="btn btn-sm">Marcar leídas</button>
+      </div>
+      <div id="lista-avisos"></div>
+    </div>
+  </span>
+
+  <button id="refresh" class="btn">
+    <svg width="15" height="15" aria-hidden="true"><use href="#i-refresh"/></svg>
+    <span id="refresh-txt">Refrescar</span>
+  </button>
+  <button id="salir" class="btn" hidden>
+    <svg width="15" height="15" aria-hidden="true"><use href="#i-salir"/></svg>
+    <span id="salir-txt">Cerrar sesión</span>
+  </button>
+</header>
+
+<main>
+  <div id="errors" class="alert alert-danger" role="alert" style="margin-bottom:var(--space-4)" hidden></div>
+
+  <div class="kpis" id="kpis" aria-live="polite"></div>
+
+  <section class="card" style="margin-bottom:var(--space-4)" aria-labelledby="h-horas">
+    <div class="card-head">
+      <h2 class="card-title" id="h-horas">Horas registradas</h2>
+      <label class="visually-hidden" for="horas-rango">Ventana de días</label>
+      <select id="horas-rango" class="field btn-sm" style="width:auto;min-height:32px">
+        <option value="14">14 días</option>
+        <option value="30">30 días</option>
+        <option value="60">60 días</option>
+        <option value="90">90 días</option>
+      </select>
+      <span class="spacer"></span>
+      <span class="horas-tot" id="horas-tot"></span>
+    </div>
+    <div id="horas-aviso"></div>
+    <div class="scroll-x"><div class="dias" id="horas-dias"></div></div>
+    <div class="leyenda" id="horas-ref"></div>
+    <div class="card-body" id="horas-detalle" style="max-height:220px"></div>
+  </section>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="h-asig">
+      <div class="card-head"><h2 class="card-title" id="h-asig">Asignados a mí</h2><span class="card-count" id="c-assigned"></span></div>
+      <div class="card-body" id="assigned"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-rev">
+      <div class="card-head"><h2 class="card-title" id="h-rev">MRs esperando mi review</h2><span class="card-count" id="c-review"></span></div>
+      <div class="card-body" id="review"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-mrs">
+      <div class="card-head"><h2 class="card-title" id="h-mrs">Mis merge requests abiertos</h2><span class="card-count" id="c-mrs"></span></div>
+      <div class="card-body" id="mrs"></div>
+    </section>
+
+    <section class="card ancho-total" aria-labelledby="h-pipe">
+      <div class="card-head">
+        <h2 class="card-title" id="h-pipe">Pipelines</h2>
+        <span class="card-count" id="c-pipelines"></span>
+        <span class="spacer"></span>
+        <label class="filtro">
+          <input type="checkbox" id="solo-problemas">
+          Solo con problemas
+        </label>
+      </div>
+      <div id="pipelines"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-bugs">
+      <div class="card-head"><h2 class="card-title" id="h-bugs">Bugs abiertos por estado</h2></div>
+      <div id="bugs"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-todos">
+      <div class="card-head"><h2 class="card-title" id="h-todos">Pendientes (To-Do de GitLab)</h2><span class="card-count" id="c-todos"></span></div>
+      <div class="card-body" id="todos"></div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function fecha(iso) {
+  if (!iso) return "";
+  const d = new Date(iso), dias = Math.floor((new Date() - d) / 86400000);
+  if (dias === 0) return "hoy";
+  if (dias === 1) return "ayer";
+  if (dias < 30) return `hace ${dias} d`;
+  return d.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "2-digit" });
+}
+
+/** Acorta el path largo de SIGO: solo las dos últimas partes son informativas. */
+function repo(path) {
+  return String(path || "").split("/").slice(-2).join("/");
+}
+
+function tags(labels) {
+  if (!labels || !labels.length) return "";
+  const html = labels.slice(0, 5).map((l) =>
+    `<span class="badge ${l.includes("::") ? "badge-scope" : ""}">${esc(l)}</span>`).join("");
+  const extra = labels.length > 5 ? `<span class="badge">+${labels.length - 5}</span>` : "";
+  return `<div class="tags">${html}${extra}</div>`;
+}
+
+/* Cargando y vacío son estados distintos y se ven distintos. */
+function esqueleto(filas = 3) {
+  return Array.from({ length: filas }, () =>
+    `<div class="skeleton"><div class="skeleton-line"></div><div class="skeleton-line corta"></div></div>`).join("");
+}
+
+function vacio(titulo, detalle) {
+  return `<div class="empty">
+    <div class="empty-title">${esc(titulo)}</div>
+    ${detalle ? `<div>${esc(detalle)}</div>` : ""}
+  </div>`;
+}
+
+function cargando(el, filas) { el.innerHTML = esqueleto(filas); }
+
+/* ---------------------------- paneles ---------------------------- */
+
+function pintarIssues(el, items, contador, textoVacio) {
+  contador.textContent = items.length ? `(${items.length})` : "";
+  if (!items.length) { el.innerHTML = vacio(textoVacio); return; }
+  el.innerHTML = items.map((i) => `
+    <a class="item" href="${esc(i.web_url)}" target="_blank" rel="noopener">
+      <div class="item-title">#${i.iid} · ${esc(i.title)}</div>
+      <div class="item-meta">
+        <span>${esc(repo(i.project))}</span><span class="sep">·</span>
+        <span>${fecha(i.updated_at)}</span>
+        ${i.milestone ? `<span class="sep">·</span><span>${esc(i.milestone)}</span>` : ""}
+      </div>
+      ${tags(i.labels)}
+    </a>`).join("");
+}
+
+function pintarMrs(el, items, contador, textoVacio) {
+  contador.textContent = items.length ? `(${items.length})` : "";
+  if (!items.length) { el.innerHTML = vacio(textoVacio); return; }
+  el.innerHTML = items.map((m) => `
+    <a class="item" href="${esc(m.web_url)}" target="_blank" rel="noopener">
+      <div class="item-title">!${m.iid} · ${esc(m.title)}</div>
+      <div class="item-meta">
+        <span>${esc(repo(m.project))}</span><span class="sep">·</span>
+        <span>${esc(m.source_branch)} → ${esc(m.target_branch)}</span><span class="sep">·</span>
+        <span>${fecha(m.updated_at)}</span>
+        ${m.draft ? '<span class="badge">draft</span>' : ""}
+        ${m.has_conflicts ? '<span class="badge badge-danger">conflictos</span>' : ""}
+      </div>
+    </a>`).join("");
+}
+
+function pintarBugs(el, bugs) {
+  if (!bugs.length) { el.innerHTML = vacio("Sin datos de bugs."); return; }
+  const max = Math.max(1, ...bugs.map((b) => b.total));
+  el.innerHTML = `<div class="bars">` + bugs.map((b) => `
+    <div class="bar">
+      <a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.estado)}</a>
+      <div class="track"><div class="fill" style="width:${(b.total / max) * 100}%"></div></div>
+      <span class="v">${b.total}</span>
+    </div>`).join("") + `</div>`;
+}
+
+function badgePipeline(status) {
+  const clase = status === "success" ? "badge-success"
+    : status === "failed" ? "badge-danger"
+    : (status === "running" || status === "pending") ? "badge-warning" : "";
+  return `<span class="badge ${clase}">${esc(status)}</span>`;
+}
+
+/** Lo que exige atención va arriba; lo que está bien, al final. */
+const ORDEN_ESTADO = { failed: 0, error: 1, running: 2, pending: 3, manual: 4, canceled: 5, success: 6 };
+const ES_PROBLEMA = (p) =>
+  p.status === "failed" || p.status === "error" ||
+  (p.despliegues || []).some((d) => d.estado === "failed");
+
+let pipelinesCache = [];
+
+function pintarPipelines(el, rows) {
+  pipelinesCache = rows;
+  const soloProblemas = $("solo-problemas").checked;
+  const problemas = rows.filter(ES_PROBLEMA).length;
+
+  $("c-pipelines").textContent = rows.length
+    ? problemas
+      ? `(${problemas} con problemas de ${rows.length})`
+      : `(${rows.length}, todos en verde)`
+    : "";
+
+  const visibles = soloProblemas ? rows.filter(ES_PROBLEMA) : rows;
+
+  if (!rows.length) {
+    el.innerHTML = vacio("Sin repos con pipelines.", "Se vigilan los del grupo con actividad reciente.");
+    return;
+  }
+  if (!visibles.length) {
+    el.innerHTML = vacio("Ningún pipeline con problemas.", "Quita el filtro para verlos todos.");
+    return;
+  }
+
+  // Agrupa por la carpeta de SIGO en la que vive cada repo.
+  const carpetas = new Map();
+  for (const p of visibles) {
+    if (!carpetas.has(p.grupo)) carpetas.set(p.grupo, []);
+    carpetas.get(p.grupo).push(p);
+  }
+
+  /** Fecha del pipeline más reciente de un conjunto de repos. */
+  const masReciente = (repos) =>
+    Math.max(...repos.map((p) => new Date(p.updated_at || 0).getTime()));
+
+  // Orden cronológico: la carpeta con movimiento más reciente, arriba.
+  const ordenadas = [...carpetas.entries()].sort(
+    (a, b) => masReciente(b[1]) - masReciente(a[1]) || a[0].localeCompare(b[0])
+  );
+
+  el.innerHTML = ordenadas.map(([carpeta, repos]) => {
+    // Por fecha descendente. La severidad solo desempata fechas idénticas.
+    repos.sort((a, b) =>
+      new Date(b.updated_at || 0) - new Date(a.updated_at || 0) ||
+      (ORDEN_ESTADO[a.status] ?? 9) - (ORDEN_ESTADO[b.status] ?? 9));
+
+    const rotos = repos.filter(ES_PROBLEMA).length;
+    const color = rotos ? "var(--danger)" : "var(--success)";
+    const fechaGrupo = fecha(repos[0].updated_at);
+
+    return `
+      <section class="grupo">
+        <div class="grupo-head">
+          <span class="punto-estado" style="background:${color};color:${color}"></span>
+          <span>${esc(carpeta)}</span>
+          <span class="cuenta">${rotos ? `${rotos} de ${repos.length} con problemas` : `${repos.length} en verde`}</span>
+          <span class="spacer"></span>
+          <span class="cuenta">${fechaGrupo}</span>
+        </div>
+        <div class="grupo-lista">${repos.map(filaPipeline).join("")}</div>
+      </section>`;
+  }).join("");
+}
+
+/** Una fila de repo dentro de su carpeta. */
+function filaPipeline(p) {
+  const despl = (p.despliegues || []).map((d) => {
+    const clase = d.estado === "success" ? "badge-success"
+      : d.estado === "failed" ? "badge-danger"
+      : (d.estado === "running" || d.estado === "pending") ? "badge-warning" : "";
+    return `<span class="badge ${clase}">${esc(d.entorno)}</span>`;
+  }).join("");
+
+  const falloDetalle = p.status === "failed" && (p.fallidos || []).length
+    ? `<span class="sep">·</span><span style="color:var(--danger)">${esc(p.fallidos.slice(0, 3).join(", "))}</span>`
+    : "";
+
+  // Más de medio año sin tocarse: histórico, no algo que atender hoy.
+  const dias = p.updated_at ? (Date.now() - new Date(p.updated_at)) / 86400000 : 0;
+  const antiguo = dias > 180 ? " antiguo" : "";
+
+  return `
+    <a class="item${antiguo}" href="${esc(p.url || "#")}" target="_blank" rel="noopener">
+      <div class="item-title">${esc(p.nombre || repo(p.project))} ${badgePipeline(p.status)}</div>
+      <div class="item-meta">
+        ${p.ref ? `<span>${esc(p.ref)}</span><span class="sep">·</span>` : ""}
+        <span>${fecha(p.updated_at)}</span>${falloDetalle}
+      </div>
+      ${despl ? `<div class="tags">${despl}</div>` : ""}
+    </a>`;
+}
+
+function pintarTodos(el, todos, contador) {
+  contador.textContent = todos.length ? `(${todos.length})` : "";
+  if (!todos.length) { el.innerHTML = vacio("Bandeja limpia.", "No tienes pendientes en GitLab."); return; }
+  el.innerHTML = todos.map((t) => `
+    <a class="item" href="${esc(t.url)}" target="_blank" rel="noopener">
+      <div class="item-title">${esc(t.titulo)}</div>
+      <div class="item-meta">
+        <span>${esc(t.accion)}</span><span class="sep">·</span>
+        <span>${esc(repo(t.proyecto))}</span><span class="sep">·</span>
+        <span>de ${esc(t.autor)}</span><span class="sep">·</span><span>${fecha(t.created_at)}</span>
+      </div>
+    </a>`).join("");
+}
+
+function pintarKpis(s) {
+  const sinRegistrar = s.bugs.reduce((a, b) => a + b.total, 0);
+  const items = [
+    ["Asignados a mí", s.assigned.length, false],
+    ["Esperan mi review", s.mrsToReview.length, s.mrsToReview.length > 0],
+    ["MRs abiertos", s.mrsAuthored.length, false],
+    ["To-Do pendientes", s.todos.length, false],
+    ["Bugs abiertos", sinRegistrar, false]
+  ];
+  $("kpis").innerHTML = items.map(([l, n, alerta]) =>
+    `<div class="kpi ${alerta ? "kpi-alerta" : ""}"><div class="kpi-n">${n}</div><div class="kpi-l">${esc(l)}</div></div>`).join("");
+}
+
+/* ---------------------------- notificaciones ---------------------------- */
+
+const ICONO_AVISO = {
+  issue: ["i-issue", "t-issue"],
+  todo: ["i-todo", "t-todo"],
+  "mr-review": ["i-mr", "t-mr"],
+  "mr-aprobado": ["i-mr", "t-mr"],
+  "mr-merged": ["i-mr", "t-mr"],
+  pipeline: ["i-pipe", "t-pipe"],
+  despliegue: ["i-desp", "t-desp"],
+  horas: ["i-horas", "t-horas"],
+  actualizacion: ["i-update", "t-update"]
+};
+
+function hace(iso) {
+  const seg = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (seg < 60) return "hace un momento";
+  if (seg < 3600) return `hace ${Math.floor(seg / 60)} min`;
+  if (seg < 86400) return `hace ${Math.floor(seg / 3600)} h`;
+  const d = new Date(iso);
+  return d.toLocaleDateString("es-PE", { day: "2-digit", month: "short" }) + " " +
+    d.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+}
+
+function pintarAvisos(datos) {
+  const badge = $("badge");
+  badge.hidden = datos.noLeidas === 0;
+  badge.textContent = datos.noLeidas > 99 ? "99+" : datos.noLeidas;
+  $("campana").setAttribute("aria-label",
+    datos.noLeidas ? `Notificaciones: ${datos.noLeidas} sin leer` : "Notificaciones");
+
+  const lista = $("lista-avisos");
+  if (!datos.items.length) {
+    lista.innerHTML = vacio("Sin notificaciones", "Aquí aparecerán los cambios en tus issues, MRs y pipelines.");
+    return;
+  }
+
+  lista.innerHTML = datos.items.map((a) => {
+    const [icono, clase] = ICONO_AVISO[a.tipo] || ["i-todo", "t-todo"];
+    const etiqueta = a.url ? "a" : "div";
+    const attrs = a.url ? `href="${esc(a.url)}" target="_blank" rel="noopener"` : "";
+    return `
+      <${etiqueta} class="aviso-item ${a.leido ? "" : "no-leido"}" ${attrs}>
+        <span class="aviso-ico ${clase}"><svg aria-hidden="true"><use href="#${icono}"/></svg></span>
+        <span class="aviso-cuerpo">
+          <div class="aviso-titulo">${esc(a.titulo)}</div>
+          <div class="aviso-texto">${esc(a.cuerpo)}</div>
+          <div class="aviso-fecha">${hace(a.fecha)}</div>
+        </span>
+        ${a.leido ? "" : '<span class="punto" aria-label="sin leer"></span>'}
+      </${etiqueta}>`;
+  }).join("");
+}
+
+/* ---- historial local (solo en la versión web) ----
+   En serverless no hay memoria entre peticiones: el servidor solo compara y el
+   navegador custodia la lista. En la app de escritorio el proceso de Electron
+   ya lleva el historial, así que ahí se pide tal cual. */
+const CLAVE_AVISOS = "panel-sigo:avisos";
+const CLAVE_ESTADO = "panel-sigo:estado";
+
+function leerLocal(clave, porDefecto) {
+  try { return JSON.parse(localStorage.getItem(clave)) ?? porDefecto; }
+  catch { return porDefecto; }
+}
+
+function guardarLocal(clave, valor) {
+  try { localStorage.setItem(clave, JSON.stringify(valor)); } catch { /* modo privado */ }
+}
+
+async function avisosWeb() {
+  const estadoPrevio = leerLocal(CLAVE_ESTADO, null);
+  let guardados = leerLocal(CLAVE_AVISOS, []);
+
+  const r = await fetch("/api/notificaciones", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ estado: estadoPrevio })
+  });
+  if (r.status === 401) { location.href = "/login"; throw new Error("sesión expirada"); }
+  const { avisos, estado } = await r.json();
+
+  guardarLocal(CLAVE_ESTADO, estado);
+  if (avisos.length) {
+    const nuevos = avisos.map((a, i) => ({
+      ...a, id: Date.now() + i, fecha: new Date().toISOString(), leido: false
+    }));
+    guardados = [...nuevos.reverse(), ...guardados].slice(0, 100);
+    guardarLocal(CLAVE_AVISOS, guardados);
+  }
+  return { items: guardados, noLeidas: guardados.filter((a) => !a.leido).length };
+}
+
+async function cargarAvisos() {
+  try {
+    pintarAvisos(modoSesion === "oauth" ? await avisosWeb() : await pedir("/api/notificaciones"));
+  } catch {
+    $("lista-avisos").innerHTML = vacio("No se pudieron leer las notificaciones.");
+  }
+}
+
+$("campana").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const panel = $("panel-avisos");
+  const abrir = panel.hidden;
+  panel.hidden = !abrir;
+  $("campana").setAttribute("aria-expanded", String(abrir));
+  if (abrir) { $("lista-avisos").innerHTML = esqueleto(3); cargarAvisos(); }
+});
+
+document.addEventListener("click", (e) => {
+  const panel = $("panel-avisos");
+  if (!panel.hidden && !panel.contains(e.target)) {
+    panel.hidden = true;
+    $("campana").setAttribute("aria-expanded", "false");
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || $("panel-avisos").hidden) return;
+  $("panel-avisos").hidden = true;
+  $("campana").setAttribute("aria-expanded", "false");
+  $("campana").focus();   // el foco vuelve a donde estaba, no al principio
+});
+
+$("marcar-leidas").addEventListener("click", async (e) => {
+  e.stopPropagation();
+  if (modoSesion === "oauth") {
+    const guardados = leerLocal(CLAVE_AVISOS, []).map((a) => ({ ...a, leido: true }));
+    guardarLocal(CLAVE_AVISOS, guardados);
+    pintarAvisos({ items: guardados, noLeidas: 0 });
+    return;
+  }
+  await fetch("/api/notificaciones/leidas", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({})
+  });
+  cargarAvisos();
+});
+
+/* ---------------------------- horas ---------------------------- */
+
+const JORNADA = 9;
+
+function pintarDetalleDia(dia) {
+  const el = $("horas-detalle");
+  if (!dia) { el.innerHTML = ""; return; }
+  if (!dia.entradas.length) {
+    el.innerHTML = vacio(`${dia.fecha} (${dia.diaSemana})`, "Sin horas registradas este día.");
+    return;
+  }
+  el.innerHTML = dia.entradas.map((e) => `
+    <a class="item" href="${esc(e.url || "#")}" target="_blank" rel="noopener">
+      <div class="item-title"><span class="nums">${e.horas} h</span> · ${esc(e.titulo)}</div>
+      <div class="item-meta">
+        ${e.issue ? `<span>#${e.issue}</span><span class="sep">·</span>` : ""}
+        <span>${esc(dia.fecha)} (${esc(dia.diaSemana)})</span>
+        ${e.nota ? `<span class="sep">·</span><span>${esc(e.nota)}</span>` : ""}
+      </div>
+    </a>`).join("");
+}
+
+function pintarHoras(r) {
+  $("horas-tot").innerHTML =
+    `<span class="big">${r.horasHoy} h</span><span class="sub">hoy</span>` +
+    `<span class="big">${r.horasSemana} h</span><span class="sub">esta semana</span>` +
+    `<span class="big">${r.totalHoras} h</span><span class="sub">últimos ${r.dias.length} días</span>`;
+
+  const pendientes = r.diasLaborablesSinRegistro;
+  $("horas-aviso").innerHTML = pendientes.length
+    ? `<div class="alert alert-warning" style="margin:0 var(--space-4) var(--space-3)">
+         <div><strong>${pendientes.length} día(s) laborable(s) sin registrar.</strong>
+         Últimos: ${esc(pendientes.slice(-5).join(", "))}${pendientes.length > 5 ? "…" : ""}</div>
+       </div>`
+    : "";
+
+  const tope = Math.max(JORNADA, ...r.dias.map((d) => d.horas));
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  $("horas-dias").innerHTML = r.dias.map((d, i) => {
+    let clase = !d.laborable ? "finde" : d.horas === 0 ? "vacio" : d.horas < JORNADA ? "parcial" : "";
+    if (d.fecha === hoy) clase += " hoy";
+    const alto = Math.max(3, (d.horas / tope) * 100);
+    const estado = !d.laborable ? "fin de semana" : d.horas === 0 ? "sin registrar" : `${d.horas} horas`;
+    return `
+      <button class="dia ${clase}" data-i="${i}" aria-pressed="false"
+              aria-label="${esc(d.fecha)}, ${esc(estado)}">
+        <span class="h">${d.horas || ""}</span>
+        <span class="col"><span class="colfill" style="height:${alto}%"></span></span>
+        <span class="d">${esc(d.diaSemana)} ${esc(d.fecha.slice(8))}</span>
+      </button>`;
+  }).join("");
+
+  $("horas-ref").innerHTML =
+    `<span>Jornada de referencia: ${JORNADA} h</span>` +
+    `<span><i class="muestra" style="background:var(--success)"></i> completa</span>` +
+    `<span><i class="muestra" style="background:var(--warning)"></i> parcial</span>` +
+    `<span><i class="muestra" style="background:var(--danger-soft);border:1px dashed #6b3a3a"></i> sin registro</span>`;
+
+  const seleccionar = (i) => {
+    document.querySelectorAll(".dia").forEach((b) => b.setAttribute("aria-pressed", "false"));
+    const btn = document.querySelector(`.dia[data-i="${i}"]`);
+    if (btn) btn.setAttribute("aria-pressed", "true");
+    pintarDetalleDia(r.dias[i]);
+  };
+
+  document.querySelectorAll(".dia").forEach((btn) => {
+    btn.addEventListener("click", () => seleccionar(Number(btn.dataset.i)));
+  });
+
+  const idxHoy = r.dias.findIndex((d) => d.fecha === hoy);
+  const ultimoConHoras = r.dias.map((d, i) => (d.horas > 0 ? i : -1)).filter((i) => i >= 0).pop();
+  seleccionar(r.dias[idxHoy]?.horas ? idxHoy : (ultimoConHoras ?? idxHoy));
+}
+
+/**
+ * En la versión web, una sesión vencida devuelve 401: se vuelve al login.
+ * Si el servidor local ya no está (se cerró la sesión, se detuvo la app), un
+ * fetch lanza TypeError: se traduce a algo que el usuario pueda entender.
+ */
+async function pedir(ruta) {
+  let r;
+  try {
+    r = await fetch(ruta);
+  } catch {
+    servidorCaido = true;
+    throw new Error("Sin conexión con el panel. Se cerró la sesión o la app se detuvo.");
+  }
+  servidorCaido = false;
+  if (r.status === 401) { location.href = "/login"; throw new Error("sesión expirada"); }
+  return r.json();
+}
+
+function cargarHoras() {
+  const dias = $("horas-rango").value;
+  $("horas-dias").innerHTML = "";
+  $("horas-detalle").innerHTML = esqueleto(2);
+  return pedir(`/api/timelogs?dias=${dias}`)
+    .then((h) => pintarHoras(h))
+    .catch(() => { $("horas-detalle").innerHTML = vacio("No se pudieron leer las horas registradas."); });
+}
+
+$("horas-rango").addEventListener("change", cargarHoras);
+$("solo-problemas").addEventListener("change", () => pintarPipelines($("pipelines"), pipelinesCache));
+
+/* ---------------------------- carga general ---------------------------- */
+
+async function cargar() {
+  const boton = $("refresh");
+  boton.disabled = true;
+  $("refresh-txt").textContent = "Cargando…";
+
+  ["assigned", "review", "mrs", "pipelines", "todos"].forEach((id) => cargando($(id), 3));
+  $("bugs").innerHTML = esqueleto(3);
+
+  try {
+    const me = await pedir("/api/me");
+    $("who").textContent = `${me.name} (@${me.username})`;
+    $("salir").hidden = !me.puedeCerrarSesion;
+    modoSesion = me.modo;
+
+    const s = await pedir("/api/summary");
+    pintarKpis(s);
+    pintarIssues($("assigned"), s.assigned, $("c-assigned"), "Nada asignado.");
+    pintarMrs($("review"), s.mrsToReview, $("c-review"), "Nada por revisar.");
+    pintarMrs($("mrs"), s.mrsAuthored, $("c-mrs"), "No tienes MRs abiertos.");
+    pintarBugs($("bugs"), s.bugs);
+    pintarTodos($("todos"), s.todos, $("c-todos"));
+
+    const errores = $("errors");
+    if (s.errors && s.errors.length) {
+      errores.hidden = false;
+      errores.innerHTML = "<div><strong>Algunos paneles no cargaron:</strong><br>" +
+        s.errors.map(esc).join("<br>") + "</div>";
+    } else {
+      errores.hidden = true;
+    }
+
+    cargarHoras();
+    cargarAvisos();
+
+    // Más lentos: no bloquean el render principal.
+    pedir("/api/pipelines").then((p) => pintarPipelines($("pipelines"), p))
+      .catch(() => { $("pipelines").innerHTML = vacio("No se pudieron leer los pipelines."); });
+
+    $("stamp").textContent = "actualizado " + new Date().toLocaleTimeString("es-PE");
+  } catch (error) {
+    const errores = $("errors");
+    errores.hidden = false;
+    errores.innerHTML = `<div><strong>Error cargando el panel.</strong><br>${esc(error.message)}</div>`;
+  } finally {
+    boton.disabled = false;
+    $("refresh-txt").textContent = "Refrescar";
+  }
+}
+
+let modoSesion = "token";
+let servidorCaido = false;
+
+$("salir").addEventListener("click", async () => {
+  if (modoSesion === "oauth") {
+    try { localStorage.removeItem(CLAVE_AVISOS); localStorage.removeItem(CLAVE_ESTADO); } catch {}
+    location.href = "/auth/logout";
+    return;
+  }
+
+  // Escritorio: la confirmación la pide la app con un diálogo nativo.
+  $("salir").disabled = true;
+  $("salir-txt").textContent = "Cerrando…";
+  try {
+    const r = await fetch("/api/logout", { method: "POST" });
+    if (!r.ok) throw new Error((await r.json()).error || "No se pudo cerrar sesión.");
+    // Si el usuario cancela en el diálogo, el panel sigue vivo: se restaura.
+    setTimeout(() => {
+      $("salir").disabled = false;
+      $("salir-txt").textContent = "Cerrar sesión";
+    }, 4000);
+  } catch (error) {
+    $("salir").disabled = false;
+    $("salir-txt").textContent = "Cerrar sesión";
+    const errores = $("errors");
+    errores.hidden = false;
+    errores.innerHTML = "<div><strong>" + esc(error.message) + "</strong></div>";
+  }
+});
+
+$("refresh").addEventListener("click", cargar);
+cargar();
+
+// El contador se refresca solo, pero deja de insistir si el servidor cayó:
+// reintentar cada minuto contra un puerto muerto no arregla nada y llena la
+// consola de errores.
+const sondeo = setInterval(() => {
+  if (servidorCaido) { clearInterval(sondeo); return; }
+  cargarAvisos();
+}, 60000);
+</script>
+</body>
+</html>

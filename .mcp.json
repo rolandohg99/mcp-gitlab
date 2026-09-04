@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "gitlab": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\hgnro\\Documents\\comsatel\\poc\\dev-gitlab-mcp\\dist\\index.js"
+      ]
+    }
+  }
+}

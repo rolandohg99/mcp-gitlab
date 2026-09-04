@@ -1,0 +1,17 @@
+# dependencias y compilados
+node_modules/
+dist/
+
+# artefactos de empaquetado (el instalador pesa ~95 MB)
+release/
+release-v2/
+*.exe
+*.blockmap
+
+# secretos: nunca al repositorio
+.env
+.env.local
+.vercel/
+
+# ruido
+*.log

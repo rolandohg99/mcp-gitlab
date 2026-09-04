@@ -1,0 +1,69 @@
+################################################################################
+# Despliegue del panel a Vercel desde GitLab CI.
+#
+# La integración directa de Vercel con Git no sirve aquí: requiere webhooks y
+# clonado, y solo funciona con gitlab.com. Para GitLab autoalojado, la propia
+# documentación de Vercel indica esta vía — construir en el pipeline y subir
+# solo el resultado.
+#
+# Ventaja añadida: `vercel build` compila aquí dentro, así que el código fuente
+# nunca se sube a Vercel; solo la carpeta .vercel/output ya construida.
+#
+# Variables a definir en Settings > CI/CD > Variables (marcadas como
+# "Masked" y "Protected"):
+#   VERCEL_TOKEN       token de https://vercel.com/account/tokens
+#   VERCEL_ORG_ID      de .vercel/project.json tras un `vercel link` local
+#   VERCEL_PROJECT_ID  idem
+################################################################################
+
+stages:
+  - verificar
+  - desplegar
+
+default:
+  image: node:20-alpine
+  # --ignore-scripts evita que Electron descargue su binario (150 MB) en un
+  # despliegue que solo necesita la parte web.
+  before_script:
+    - npm ci --ignore-scripts
+
+verificar tipos:
+  stage: verificar
+  script:
+    - npx tsc --noEmit
+    - npx tsc -p tsconfig.api.json
+  rules:
+    - if: $CI_COMMIT_BRANCH
+
+.vercel_base:
+  stage: desplegar
+  script:
+    - npm i -g vercel@latest
+    - vercel pull --yes --environment=$ENTORNO --token=$VERCEL_TOKEN
+    - vercel build $FLAG_PROD --token=$VERCEL_TOKEN
+    - vercel deploy --prebuilt $FLAG_PROD --token=$VERCEL_TOKEN
+  rules:
+    - if: $VERCEL_TOKEN == null
+      when: never
+
+vista previa:
+  extends: .vercel_base
+  variables:
+    ENTORNO: preview
+    FLAG_PROD: ""
+  rules:
+    - if: $VERCEL_TOKEN == null
+      when: never
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_BRANCH =~ /_Feature_/i
+
+produccion:
+  extends: .vercel_base
+  variables:
+    ENTORNO: production
+    FLAG_PROD: "--prod"
+  rules:
+    - if: $VERCEL_TOKEN == null
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "master"

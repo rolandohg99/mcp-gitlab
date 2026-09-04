@@ -1,0 +1,28 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "outputDirectory": "public",
+  "buildCommand": null,
+  "installCommand": "npm install --ignore-scripts",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@5.1.10",
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/auth/logout", "destination": "/api/auth/logout" },
+    { "source": "/auth/login", "destination": "/api/auth/login" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ]
+}
