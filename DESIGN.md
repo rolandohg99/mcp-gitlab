@@ -1,5 +1,5 @@
 ---
-name: Panel de desarrollo SIGO
+name: Panel de desarrollo Comsatel
 description: Panel diario del desarrollador para issues, merge requests, pipelines y horas registradas en GitLab.
 colors:
   bg: "#09090b"
@@ -138,7 +138,7 @@ components:
     height: "18px"
 ---
 
-# Design System: Panel de desarrollo SIGO
+# Design System: Panel de desarrollo Comsatel
 
 ## Overview
 

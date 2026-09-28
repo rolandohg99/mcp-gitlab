@@ -11,7 +11,7 @@ En GitLab: **Preferences → Applications**
 
 | Campo | Valor |
 |---|---|
-| Name | `Panel SIGO` |
+| Name | `Panel Comsatel` |
 | Redirect URI | `https://TU-DOMINIO.vercel.app/api/auth/callback` |
 | Confidential | marcado |
 | Scopes | `read_api` |
