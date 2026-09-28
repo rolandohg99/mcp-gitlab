@@ -1,7 +1,6 @@
 # Nada de la app de escritorio viaja al despliegue web.
 dist/
-release/
-release-v2/
+release*/
 build/
 scripts/
 src/desktop/

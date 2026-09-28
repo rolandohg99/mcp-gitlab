@@ -5,35 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Entrar · Panel de desarrollo SIGO</title>
 <link rel="stylesheet" href="/app.css">
-<style>
-  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: var(--space-4); }
-  .caja {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
-    padding: var(--space-6); max-width: 440px; width: 100%;
-  }
-  .marca {
-    width: 0; height: 0; margin: 0 auto var(--space-5);
-    border-left: 24px solid transparent; border-right: 24px solid transparent;
-    border-top: 40px solid #e24329;
-  }
-  h1 { font-size: var(--text-lg); text-align: center; margin-bottom: var(--space-2); }
-  .sub { color: var(--text-muted); text-align: center; margin: 0 0 var(--space-6); font-size: var(--text-sm); }
-  .entrar { width: 100%; }
-  .nota { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--text-xs); }
-  .nota p { margin: 0 0 var(--space-2); }
-  .nota strong { color: var(--text); }
-  code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.92em; }
-  @media (max-width: 480px) { .caja { padding: var(--space-5) var(--space-4); } }
-</style>
 </head>
-<body>
+<body class="acceso">
   <main class="caja">
-    <div class="marca" aria-hidden="true"></div>
+    <svg class="marca" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+      <rect x="2.75" y="2.75" width="18.5" height="18.5" rx="4.5" stroke-width="1.5"/>
+      <path d="M7.5 15.5v-3M12 15.5v-7M16.5 15.5v-5" stroke-width="2" stroke-linecap="round"/>
+    </svg>
     <h1>Panel de desarrollo SIGO</h1>
     <p class="sub">Tus issues, merge requests, pipelines y horas registradas, en un solo lugar.</p>
 
-    <a class="btn btn-primary entrar" href="/auth/login">Iniciar sesión con GitLab</a>
+    <a class="btn btn-primary btn-block" href="/auth/login">Iniciar sesión con GitLab</a>
 
     <div class="nota">
       <p><strong>Entras en GitLab, no aquí.</strong> Este panel nunca ve tu contraseña: te
@@ -42,5 +24,6 @@
       <p>Cada persona ve únicamente sus propios datos.</p>
     </div>
   </main>
+  <footer class="pie">© 2026 · Creado por nrolando</footer>
 </body>
 </html>

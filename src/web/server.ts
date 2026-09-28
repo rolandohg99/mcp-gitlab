@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadGitlabUrl } from "../config.js";
 import { DashboardApi } from "../dashboard/api.js";
+import { comparar, estadoInicial, type Estado } from "../dashboard/comparador.js";
 import { construirSnapshot } from "../dashboard/snapshot.js";
 import { buildTimelogReport } from "../dashboard/timelogs.js";
 import { cargarOAuth, canjearCodigo, revocar, urlDeAutorizacion, usuarioDelToken } from "./oauth.js";
@@ -159,14 +160,21 @@ async function manejarApi(
       );
     }
     case "/api/notificaciones": {
-      // Aqui el navegador es el unico cliente: hay que comparar en el servidor.
-      const snap = await construirSnapshot(sesion.client, sesion.usuario.username, gitlabUrl, false);
-      sesion.centro.sincronizar(snap);
-      return json(res, 200, sesion.centro.listar());
-    }
-    case "/api/notificaciones/leidas": {
-      const cuerpo = (await leerCuerpo(req)) as { ids?: number[] };
-      return json(res, 200, { marcadas: sesion.centro.marcarLeidas(cuerpo?.ids) });
+      // Mismo contrato que api/notificaciones.ts (Vercel): el front en modo
+      // oauth custodia estado e historial en localStorage y espera
+      // { avisos, estado }. El marcado de leidas tambien lo hace el navegador.
+      if (req.method !== "POST") {
+        return json(res, 405, { error: "Usa POST con el estado anterior en el cuerpo." });
+      }
+      const cuerpo = (await leerCuerpo(req)) as { estado?: Estado; horas?: boolean };
+      const previo: Estado = cuerpo?.estado?.sembrado ? cuerpo.estado : estadoInicial();
+      const snap = await construirSnapshot(
+        sesion.client,
+        sesion.usuario.username,
+        gitlabUrl,
+        Boolean(cuerpo?.horas)
+      );
+      return json(res, 200, comparar(snap, previo));
     }
     case "/api/poll": {
       // La app de escritorio pide horas solo cuando toca el recordatorio.

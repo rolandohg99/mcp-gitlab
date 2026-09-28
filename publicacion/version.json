@@ -1,6 +1,6 @@
 {
-  "version": "0.2.0",
+  "version": "0.2.2",
   "url": "https://project.comsatel.com.pe/comsatel/development/products/sigo/collaboration/-/wikis/panel-desarrollo",
-  "notas": "Pipelines de todo el grupo agrupados por carpeta, notificaciones de despliegue y rediseño de la interfaz.",
-  "publicada": "2026-09-03"
+  "notas": "Horas y recordatorio en hora de Lima, arranque oculto en la bandeja corregido y autoría en el pie.",
+  "publicada": "2026-09-27"
 }

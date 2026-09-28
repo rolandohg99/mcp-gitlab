@@ -1,4 +1,5 @@
 import type { GitLabClient } from "../gitlab/client.js";
+import { diaDeSemana, enZona, sumarDias } from "./zona.js";
 
 /** Grupo sobre el que se consultan los registros de tiempo. */
 const DEFAULT_GROUP = "comsatel/development/products/sigo";
@@ -46,17 +47,21 @@ export interface DayTotal {
 const DIAS = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"];
 
 /**
- * Agrupa por la parte de fecha de `spentAt` en UTC, sin convertir a hora local:
- * los registros hechos con `/spend 2h 2026-08-04` llegan como medianoche UTC y
- * pasarlos a UTC-5 los correria al dia anterior.
+ * Dia de calendario al que pertenece un registro. Hay dos formas en `spentAt`:
+ *  - `/spend 2h 2026-08-04` llega como medianoche UTC exacta: la fecha es la
+ *    que escribio la persona, y pasarla a UTC-5 la correria al dia anterior.
+ *  - `/spend 2h` sin fecha llega con la hora real en UTC: hay que llevarla a la
+ *    zona de la jornada, o lo registrado despues de las 19:00 de Lima caeria
+ *    en el dia siguiente.
  */
 function fechaDe(spentAt: string): string {
-  return spentAt.slice(0, 10);
+  if (/T00:00:00(?:\.0+)?(?:Z|[+-]00:?00)?$/.test(spentAt)) return spentAt.slice(0, 10);
+  const instante = new Date(spentAt);
+  return Number.isNaN(instante.getTime()) ? spentAt.slice(0, 10) : enZona(instante).fecha;
 }
 
 function nombreDia(fecha: string): { dia: string; laborable: boolean } {
-  const [y, m, d] = fecha.split("-").map(Number);
-  const dow = new Date(Date.UTC(y!, m! - 1, d!)).getUTCDay();
+  const dow = diaDeSemana(fecha);
   return { dia: DIAS[dow]!, laborable: dow >= 1 && dow <= 5 };
 }
 
@@ -101,17 +106,34 @@ export interface TimelogReport {
   totalEquipoHoras: number;
 }
 
+/** Mayor ventana que ofrece el panel; lo que pase de aqui es abuso o error. */
+const MAX_DIAS = 90;
+
+/**
+ * `dias` llega de la query string (`?dias=`): sin acotar, `?dias=1e7` armaria
+ * una serie de diez millones de dias. Lo que no sea numero cae al valor por
+ * defecto; lo que se salga del rango se recorta.
+ */
+function ventanaValida(dias: number | undefined): number {
+  if (dias === undefined || !Number.isFinite(dias)) return 14;
+  return Math.min(MAX_DIAS, Math.max(1, Math.floor(dias)));
+}
+
 export async function buildTimelogReport(
   client: GitLabClient,
   username: string,
   opciones: { dias?: number; group?: string } = {}
 ): Promise<TimelogReport> {
-  const diasVentana = opciones.dias ?? 14;
+  const diasVentana = ventanaValida(opciones.dias);
   const group = opciones.group ?? process.env.TIMELOG_GROUP?.trim() ?? DEFAULT_GROUP;
 
+  // La ventana se cuenta en dias de Lima. La consulta arranca a medianoche UTC
+  // del primer dia: cubre tanto los registros con fecha (00:00Z) como los de
+  // hora real, que en Lima empiezan a las 05:00Z.
+  const hoy = enZona().fecha;
+  const primerDia = sumarDias(hoy, -(diasVentana - 1));
   const hasta = new Date();
-  const desde = new Date(hasta.getTime() - (diasVentana - 1) * 86400000);
-  desde.setUTCHours(0, 0, 0, 0);
+  const desde = new Date(`${primerDia}T00:00:00Z`);
 
   const todos = await fetchAll(client, group, desde, hasta);
   const mios = todos.filter((t) => t.user?.username === username);
@@ -133,8 +155,7 @@ export async function buildTimelogReport(
   // Serie continua: los dias sin registro deben aparecer en cero, no faltar.
   const dias: DayTotal[] = [];
   for (let i = 0; i < diasVentana; i++) {
-    const d = new Date(desde.getTime() + i * 86400000);
-    const fecha = d.toISOString().slice(0, 10);
+    const fecha = sumarDias(primerDia, i);
     const entradas = porDia.get(fecha) ?? [];
     const { dia, laborable } = nombreDia(fecha);
     dias.push({
@@ -146,11 +167,8 @@ export async function buildTimelogReport(
     });
   }
 
-  const hoy = new Date().toISOString().slice(0, 10);
-  const inicioSemana = new Date();
-  const dow = inicioSemana.getUTCDay();
-  inicioSemana.setUTCDate(inicioSemana.getUTCDate() - (dow === 0 ? 6 : dow - 1));
-  const lunes = inicioSemana.toISOString().slice(0, 10);
+  const dow = diaDeSemana(hoy);
+  const lunes = sumarDias(hoy, -(dow === 0 ? 6 : dow - 1));
 
   const redondear = (n: number) => Math.round(n * 100) / 100;
 

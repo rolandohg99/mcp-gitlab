@@ -5,6 +5,12 @@ description: Crear y gestionar issues en el GitLab de Comsatel (project.comsatel
 
 # Issues de GitLab
 
+## Norma que manda sobre todo lo demás
+
+**No ejecutes ninguna herramienta sin autorización explícita del usuario.**
+Entrega el análisis y el borrador, y espera el visto bueno antes de crear,
+modificar, comentar o cerrar nada. El usuario lo pidió de forma expresa.
+
 Convierte una descripcion informal en un issue bien formado y lo crea via el
 servidor MCP `gitlab`. El objetivo es que el usuario escriba una frase y salga
 un issue con titulo claro, descripcion estructurada y labels reales.

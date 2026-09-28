@@ -6,38 +6,27 @@
 <title>Conectar con GitLab</title>
 <link rel="stylesheet" href="/app.css">
 <style>
-  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: var(--space-4); }
-  .caja {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
-    padding: var(--space-6); max-width: 520px; width: 100%;
-  }
-  .marca {
-    width: 0; height: 0; margin: 0 auto var(--space-4);
-    border-left: 20px solid transparent; border-right: 20px solid transparent;
-    border-top: 34px solid #e24329;
-  }
-  h1 { font-size: var(--text-lg); text-align: center; margin-bottom: var(--space-2); }
-  .sub { color: var(--text-muted); text-align: center; margin: 0 0 var(--space-5); font-size: var(--text-sm); }
-  ol { color: var(--text-muted); font-size: var(--text-sm); padding-left: var(--space-5); margin: 0 0 var(--space-5); }
-  ol li { margin-bottom: var(--space-2); }
-  ol strong, .nota strong { color: var(--text); font-weight: 600; }
+  .pasos { color: var(--text-muted); padding-left: var(--space-5); margin: 0 0 var(--space-5); }
+  .pasos li { margin-bottom: var(--space-2); }
+  .pasos li::marker { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .pasos strong { color: var(--text); font-weight: 600; }
   .campo-fila { display: flex; gap: var(--space-2); }
   .campo-fila .field { flex: 1; min-width: 0; }
+  .campo-fila .btn { min-height: var(--tap); min-width: 88px; }
+  #guardar { margin-top: var(--space-3); }
   .msg { margin-top: var(--space-4); }
-  .nota { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--text-xs); }
-  .nota p { margin: 0 0 var(--space-2); }
-  code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.92em; }
-  @media (max-width: 480px) { .caja { padding: var(--space-5) var(--space-4); } }
 </style>
 </head>
-<body>
-  <main class="caja">
-    <div class="marca" aria-hidden="true"></div>
+<body class="acceso">
+  <main class="caja caja-ancha">
+    <svg class="marca" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+      <rect x="2.75" y="2.75" width="18.5" height="18.5" rx="4.5" stroke-width="1.5"/>
+      <path d="M7.5 15.5v-3M12 15.5v-7M16.5 15.5v-5" stroke-width="2" stroke-linecap="round"/>
+    </svg>
     <h1>Conectar con GitLab</h1>
     <p class="sub">Solo la primera vez. Después la app entra sola.</p>
 
-    <ol>
+    <ol class="pasos">
       <li>Abre <a href="{{GITLAB_URL}}/-/profile/personal_access_tokens" target="_blank" rel="noopener">tus tokens de acceso</a> en GitLab.</li>
       <li>Nombre: <strong>Panel SIGO</strong>. Marca el scope <strong>read_api</strong>.</li>
       <li>Créalo y copia el token: GitLab solo lo muestra una vez.</li>
@@ -45,12 +34,12 @@
 
     <label class="label" for="token">Token de acceso personal</label>
     <div class="campo-fila">
-      <input id="token" class="field field-mono" type="password" placeholder="glpat-…"
+      <input id="token" class="field field-lg field-mono" type="password" placeholder="glpat-…"
              autocomplete="off" spellcheck="false" aria-describedby="msg">
       <button id="ver" class="btn" type="button" aria-label="Mostrar el token">Ver</button>
     </div>
 
-    <button id="guardar" class="btn btn-primary" style="width:100%;margin-top:var(--space-3)">
+    <button id="guardar" class="btn btn-primary btn-block">
       <span id="guardar-txt">Verificar y conectar</span>
     </button>
 
@@ -63,6 +52,7 @@
       token cuando quieras desde GitLab.</p>
     </div>
   </main>
+  <footer class="pie">© 2026 · Creado por nrolando</footer>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -105,7 +95,7 @@ async function enviar() {
     const data = await r.json();
 
     if (!r.ok) {
-      aviso(data.error || "No se pudo validar el token.", "danger");
+      aviso(data.error || "No se pudo validar el token. Revisa que tenga el scope read_api y no haya caducado.", "danger");
       ocupado(false);
       return;
     }
@@ -113,7 +103,7 @@ async function enviar() {
     aviso(`Conectado como ${data.name} (@${data.username}). Abriendo el panel…`, "success");
     $("guardar-txt").textContent = "Conectado";
   } catch (error) {
-    aviso("Error de conexión: " + error.message, "danger");
+    aviso("Sin conexión con la app. Cierra esta ventana y vuelve a abrir el panel. (" + error.message + ")", "danger");
     ocupado(false);
   }
 }

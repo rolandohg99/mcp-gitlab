@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { CentroDeAvisos } from "../dashboard/avisos.js";
 import { GitLabClient } from "../gitlab/client.js";
 
 /** Sesion inactiva mas de esto se descarta y obliga a volver a entrar. */
@@ -20,8 +19,6 @@ export interface Sesion {
   accessToken: string;
   refreshToken?: string;
   client: GitLabClient;
-  /** Historial de avisos de esta sesion, para la campana del panel. */
-  centro: CentroDeAvisos;
   creada: number;
   ultimoUso: number;
 }
@@ -58,7 +55,6 @@ export class SessionStore {
       accessToken,
       refreshToken,
       client: new GitLabClient(gitlabUrl, accessToken, "bearer"),
-      centro: new CentroDeAvisos(),
       creada: Date.now(),
       ultimoUso: Date.now()
     };

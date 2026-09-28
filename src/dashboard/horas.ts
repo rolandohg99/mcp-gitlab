@@ -1,12 +1,16 @@
 import type { GitLabClient } from "../gitlab/client.js";
 import { buildTimelogReport } from "./timelogs.js";
+import { enZona } from "./zona.js";
 
 /** Jornada esperada por dia laborable, en horas. */
 export const JORNADA = 9;
 
-/** Fecha local en YYYY-MM-DD; `toISOString` daria el dia UTC y en Lima adelanta. */
+/**
+ * Fecha YYYY-MM-DD en la zona de la jornada (Lima), no en la del proceso:
+ * en Vercel el proceso corre en UTC y "hoy" cambiaria a las 19:00.
+ */
 export function fechaLocal(d: Date = new Date()): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return enZona(d).fecha;
 }
 
 export interface ResumenHoras {

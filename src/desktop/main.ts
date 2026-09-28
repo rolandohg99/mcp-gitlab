@@ -50,13 +50,6 @@ function instalarMenu(): void {
   );
 }
 
-/** Hora del recordatorio de horas, configurable como HORA_AVISO=HH:MM. */
-function horaAviso(): { horaAvisoHoras: number; minutoAvisoHoras: number } {
-  const [h, m] = (process.env.HORA_AVISO?.trim() ?? "17:30").split(":").map(Number);
-  const valido = Number.isInteger(h) && h! >= 0 && h! <= 23 && Number.isInteger(m) && m! >= 0 && m! <= 59;
-  return valido ? { horaAvisoHoras: h!, minutoAvisoHoras: m! } : { horaAvisoHoras: 17, minutoAvisoHoras: 30 };
-}
-
 let ventana: BrowserWindow | null = null;
 let bandeja: Tray | null = null;
 let servidor: RunningServer | null = null;
@@ -164,11 +157,16 @@ async function pedirCredencial(): Promise<string> {
   return token;
 }
 
-async function iniciarPanel(token: string): Promise<void> {
+/**
+ * Con `mostrar` en false (arranque con --oculto) no se abre ventana: la app
+ * queda en la bandeja vigilando. Si ya hay una ventana, como la de la pantalla
+ * de token, se reutiliza para enseñar el panel.
+ */
+async function iniciarPanel(token: string, mostrar = true): Promise<void> {
   servidor = await startServer(PUERTO, { gitlabUrl: GITLAB_URL, token }, {
     alCerrarSesion: () => void cerrarSesion()
   });
-  abrirEn(servidor.url);
+  if (mostrar || (ventana && !ventana.isDestroyed())) abrirEn(servidor.url);
   refrescarMenu();
 }
 
@@ -356,10 +354,10 @@ async function ciclo(): Promise<void> {
       servidor.client,
       servidor.me.username,
       GITLAB_URL,
-      tocaAvisoDeHoras(estado, horaAviso())
+      tocaAvisoDeHoras(estado)
     );
 
-    const { avisos, estado: nuevo } = comparar(snap, estado, horaAviso());
+    const { avisos, estado: nuevo } = comparar(snap, estado);
     estado = nuevo;
     await guardarEstado();
 
@@ -421,8 +419,7 @@ if (!app.requestSingleInstanceLock()) {
       // no tiene sentido vigilar en silencio algo a lo que no hay acceso.
       const token = leerToken() ?? (await pedirCredencial());
 
-      if (!ventana && !process.argv.includes("--oculto")) crearVentana(`http://127.0.0.1:${PUERTO}`);
-      await iniciarPanel(token);
+      await iniciarPanel(token, !process.argv.includes("--oculto"));
       arrancarVigilante();
     } catch (error) {
       dialog.showErrorBox("No se pudo iniciar el panel", (error as Error).message);

@@ -2,9 +2,9 @@
 node_modules/
 dist/
 
-# artefactos de empaquetado (el instalador pesa ~95 MB)
-release/
-release-v2/
+# artefactos de empaquetado (el instalador pesa ~95 MB y cada carpeta ~450 MB)
+# Patrón y no lista: cada versión nueva (release-v3, -v4…) queda cubierta sola.
+release*/
 *.exe
 *.blockmap
 

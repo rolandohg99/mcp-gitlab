@@ -1,5 +1,6 @@
 import { fechaLocal, JORNADA } from "./horas.js";
 import type { Snapshot } from "./snapshot.js";
+import { enZona } from "./zona.js";
 
 export interface Aviso {
   tipo:
@@ -48,23 +49,34 @@ export interface OpcionesAviso {
   minutoAvisoHoras: number;
 }
 
-const POR_DEFECTO: OpcionesAviso = { horaAvisoHoras: 17, minutoAvisoHoras: 30 };
+/**
+ * Hora del recordatorio, configurable como HORA_AVISO=HH:MM. Se lee aqui y no
+ * en cada cliente para que escritorio, web local y Vercel avisen a la misma hora.
+ */
+export function horaAvisoConfigurada(): OpcionesAviso {
+  const [h, m] = (process.env.HORA_AVISO?.trim() || "17:30").split(":").map(Number);
+  const valido =
+    Number.isInteger(h) && h! >= 0 && h! <= 23 && Number.isInteger(m) && m! >= 0 && m! <= 59;
+  return valido ? { horaAvisoHoras: h!, minutoAvisoHoras: m! } : { horaAvisoHoras: 17, minutoAvisoHoras: 30 };
+}
 
 function nuevos<T>(actuales: T[], previos: T[]): T[] {
   const set = new Set(previos);
   return actuales.filter((x) => !set.has(x));
 }
 
-/** ¿Toca ya el recordatorio de horas? Solo dias laborables, una vez al dia. */
+/**
+ * ¿Toca ya el recordatorio de horas? Solo dias laborables, una vez al dia.
+ * Dia y hora se miden en la zona de la jornada, no en la del proceso.
+ */
 export function tocaAvisoDeHoras(previo: Estado, opciones: Partial<OpcionesAviso> = {}): boolean {
-  const cfg = { ...POR_DEFECTO, ...opciones };
-  const ahora = new Date();
-  const dia = ahora.getDay();
-  if (dia === 0 || dia === 6) return false;
-  if (previo.horasAvisadas === fechaLocal(ahora)) return false;
+  const cfg = { ...horaAvisoConfigurada(), ...opciones };
+  const ahora = enZona();
+  if (ahora.diaSemana === 0 || ahora.diaSemana === 6) return false;
+  if (previo.horasAvisadas === ahora.fecha) return false;
   return (
-    ahora.getHours() > cfg.horaAvisoHoras ||
-    (ahora.getHours() === cfg.horaAvisoHoras && ahora.getMinutes() >= cfg.minutoAvisoHoras)
+    ahora.hora > cfg.horaAvisoHoras ||
+    (ahora.hora === cfg.horaAvisoHoras && ahora.minuto >= cfg.minutoAvisoHoras)
   );
 }
 
