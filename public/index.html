@@ -68,31 +68,36 @@
   [id^="h-"] { scroll-margin-top: 96px; }
   .bloque { margin-bottom: var(--space-4); }
 
-  /* ---- resumen: una tira de instrumentos, cada lectura enlaza a su lista ---- */
-  /* Las líneas entre lecturas son sombras de 1px hacia fuera: una celda que
-     sobra al final de la rejilla queda del mismo tono que la tira. */
+  /* ---- resumen: seis lecturas, cada una enlaza a su lista ----
+     El color de cada icono identifica la lectura; la cifra solo se tiñe
+     cuando pide atención (MRs esperando tu revisión). */
   .kpis {
-    display: grid; margin-bottom: var(--space-4);
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: hidden;
+    display: grid; gap: var(--space-3); margin-bottom: var(--space-4);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
   .kpi {
-    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
-    min-height: 56px; padding: var(--space-2) var(--space-4);
-    box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border);
-    background: var(--surface); color: var(--text-muted); text-decoration: none;
-    font-size: var(--text-sm); transition: background var(--t-fast) var(--ease);
+    --tono: var(--text-muted);
+    display: flex; align-items: center; gap: var(--space-3);
+    min-height: 76px; padding: var(--space-3) var(--space-4);
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text-muted); text-decoration: none;
+    transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
   }
-  .kpi:hover { background: var(--surface-2); }
-  .kpi:focus-visible { outline-offset: -2px; }
-  .kpi-n { color: var(--text); font-size: var(--text-lg); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
-  .kpi-alerta { color: var(--text); }
+  .kpi:hover { background: var(--surface-2); border-color: var(--border-strong); }
+  .kpi-ico {
+    flex: none; display: grid; place-items: center; width: 40px; height: 40px;
+    border-radius: var(--radius-sm); color: var(--tono);
+    background: color-mix(in srgb, var(--tono) 16%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tono) 30%, transparent);
+  }
+  .kpi-datos { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .kpi-n { color: var(--text); font-size: 1.5rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+  .kpi-l { font-size: var(--text-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kpi-flecha { flex: none; color: var(--text-muted); transition: transform var(--t-fast) var(--ease); }
+  .kpi:hover .kpi-flecha { transform: translateX(2px); color: var(--text); }
   .kpi-alerta .kpi-n { color: var(--warning); }
-  .kpi-alerta .kpi-l::before {
-    content: ""; display: inline-block; width: 6px; height: 6px; margin-right: var(--space-2);
-    border-radius: 50%; background: var(--warning); vertical-align: middle;
-  }
+  @media (max-width: 1279px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 719px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); } .kpi { padding: var(--space-3); } }
 
   .grid {
     display: grid; gap: var(--space-4); align-items: start;
@@ -410,6 +415,12 @@
   </symbol>
   <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
     <path d="M4 6h16M4 12h16M4 18h16"/>
+  </symbol>
+  <symbol id="i-bicho" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="7" y="7" width="10" height="13" rx="5"/><path d="M9 7a3 3 0 016 0M12 11v9M3 13h4M17 13h4M4 7l3 2M20 7l-3 2M4 19l3-2M20 19l-3-2"/>
+  </symbol>
+  <symbol id="i-capas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>
   </symbol>
   <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M9 6l6 6-6 6"/>
@@ -882,18 +893,26 @@ function pintarTodos(el, todos, contador) {
     </a>`).join("");
 }
 
+/** Estados de bug que todavía piden trabajo; Done y Deployed ya no. */
+const ESTADOS_ACTIVOS = ["New", "In Analysis", "In Development", "In Test"];
+
 function pintarKpis(s) {
-  const bugsAbiertos = s.bugs.reduce((a, b) => a + b.total, 0);
+  const bugsTotales = s.bugs.reduce((a, b) => a + b.total, 0);
+  const bugsActivos = s.bugs.filter((b) => ESTADOS_ACTIVOS.includes(b.estado)).reduce((a, b) => a + b.total, 0);
+  // [etiqueta, cifra, alerta, destino, icono, tono]
   const items = [
-    ["Asignados a mí", s.assigned.length, false, "h-asig"],
-    ["Esperan mi revisión", s.mrsToReview.length, s.mrsToReview.length > 0, "h-rev"],
-    ["Mis MRs abiertos", s.mrsAuthored.length, false, "h-mrs"],
-    ["To-Do pendientes", s.todos.length, false, "h-todos"],
-    ["Bugs abiertos", bugsAbiertos, false, "h-bugs"]
+    ["Asignados a mí", s.assigned.length, false, "#tareas", "i-issue", "var(--primary)"],
+    ["Esperan mi revisión", s.mrsToReview.length, s.mrsToReview.length > 0, "#tareas", "i-horas", "var(--warning)"],
+    ["Mis MRs abiertos", s.mrsAuthored.length, false, "#tareas", "i-mr", "var(--success)"],
+    ["To-Do pendientes", s.todos.length, false, "#tareas", "i-todo", "var(--accent-violeta)"],
+    ["Bugs activos", bugsActivos, false, "#h-bugs", "i-bicho", "var(--danger)"],
+    ["Bugs totales", bugsTotales, false, "#h-bugs", "i-capas", "var(--text-muted)"]
   ];
-  $("kpis").innerHTML = items.map(([l, n, alerta, destino]) =>
-    `<a class="kpi ${alerta ? "kpi-alerta" : ""}" href="#${destino}">
-       <span class="kpi-l">${esc(l)}</span><span class="kpi-n">${n}</span>
+  $("kpis").innerHTML = items.map(([l, n, alerta, destino, icono, tono]) =>
+    `<a class="kpi ${alerta ? "kpi-alerta" : ""}" href="${destino}" style="--tono:${tono}">
+       <span class="kpi-ico"><svg width="20" height="20" aria-hidden="true"><use href="#${icono}"/></svg></span>
+       <span class="kpi-datos"><span class="kpi-n">${n}</span><span class="kpi-l">${esc(l)}</span></span>
+       <svg class="kpi-flecha" width="16" height="16" aria-hidden="true"><use href="#i-chevron"/></svg>
      </a>`).join("");
 }
 
