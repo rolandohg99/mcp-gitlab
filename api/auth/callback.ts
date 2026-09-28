@@ -6,6 +6,7 @@ import {
   nuevaSesion
 } from "../_lib/sesion.js";
 import { gitlabUrl, guardia, origen, param, type Req, type Res } from "../_lib/contexto.js";
+import { escaparHtml } from "../../src/web/html.js";
 
 function paginaError(mensaje: string): string {
   return `<!doctype html><meta charset="utf-8">
@@ -14,7 +15,7 @@ function paginaError(mensaje: string): string {
 <body style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px">
   <main class="card" style="max-width:460px;padding:32px;text-align:center">
     <h1 style="font-size:1.25rem;margin-bottom:12px">No se pudo iniciar sesión</h1>
-    <p class="text-muted" style="font-size:.8125rem">${mensaje}</p>
+    <p class="text-muted" style="font-size:.8125rem">${escaparHtml(mensaje)}</p>
     <p style="margin-top:24px"><a class="btn btn-primary" href="/login">Reintentar</a></p>
   </main>
 </body>`;

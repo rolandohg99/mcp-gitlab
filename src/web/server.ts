@@ -9,6 +9,7 @@ import { comparar, estadoInicial, type Estado } from "../dashboard/comparador.js
 import { construirSnapshot } from "../dashboard/snapshot.js";
 import { buildTimelogReport } from "../dashboard/timelogs.js";
 import { cargarOAuth, canjearCodigo, revocar, urlDeAutorizacion, usuarioDelToken } from "./oauth.js";
+import { escaparHtml } from "./html.js";
 import { SessionStore, type Sesion } from "./sessions.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -98,7 +99,7 @@ async function manejar(req: IncomingMessage, res: ServerResponse): Promise<void>
       const error = url.searchParams.get("error");
       if (error) {
         res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(`<p>GitLab rechazó el acceso: ${error}</p><p><a href="/login">Reintentar</a></p>`);
+        res.end(`<p>GitLab rechazó el acceso: ${escaparHtml(error)}</p><p><a href="/login">Reintentar</a></p>`);
         return;
       }
 
