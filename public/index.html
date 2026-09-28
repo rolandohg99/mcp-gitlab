@@ -73,7 +73,7 @@
      cuando pide atención (MRs esperando tu revisión). */
   .kpis {
     display: grid; gap: var(--space-3); margin-bottom: var(--space-4);
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
   }
   .kpi {
     --tono: var(--text-muted);
@@ -92,11 +92,11 @@
   }
   .kpi-datos { flex: 1; min-width: 0; display: grid; gap: 2px; }
   .kpi-n { color: var(--text); font-size: 1.5rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
-  .kpi-l { font-size: var(--text-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kpi-l { font-size: var(--text-xs); line-height: 1.3; }
   .kpi-flecha { flex: none; color: var(--text-muted); transition: transform var(--t-fast) var(--ease); }
   .kpi:hover .kpi-flecha { transform: translateX(2px); color: var(--text); }
   .kpi-alerta .kpi-n { color: var(--warning); }
-  @media (max-width: 1279px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 1439px) { .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   @media (max-width: 719px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); } .kpi { padding: var(--space-3); } }
 
   /* ---- tablero: Mis tareas y MRs a la izquierda, pipelines a la derecha ---- */
@@ -315,9 +315,19 @@
   /* ---- bugs ---- */
   .bars { display: grid; gap: var(--space-3); padding: var(--space-4); }
   /* Subtítulo de producto en bugs: tono de metadato, las cifras mandan. */
-  .bugs-producto { padding: var(--space-4) var(--space-4) 0; font-size: var(--text-xs); font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .bugs-producto {
+    display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap;
+    padding: var(--space-4) var(--space-4) 0; font-size: var(--text-xs); font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .bugs-producto .suma { text-transform: none; letter-spacing: 0; font-weight: 400; font-variant-numeric: tabular-nums; }
   .bugs-producto + .bars { padding-top: var(--space-2); }
-  .bar { display: grid; grid-template-columns: minmax(96px, 140px) 1fr 40px; gap: var(--space-3); align-items: center; font-size: var(--text-sm); }
+  .bar { display: grid; grid-template-columns: minmax(96px, 140px) 1fr 52px 64px; gap: var(--space-3); align-items: center; font-size: var(--text-sm); }
+  .bar-cab { color: var(--text-muted); font-size: var(--text-xs); }
+  .bar-cab span:nth-child(n+3) { text-align: right; }
+  .bar .v.cerr { color: var(--neutral-mark); }
+  .bar a.v { color: var(--text-muted); }
+  .bar a.v.cerr { color: var(--neutral-mark); }
   .bar a { color: var(--text); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar a:hover { color: var(--primary); text-decoration: underline; }
   .track { height: 6px; background: var(--surface-2); border-radius: var(--radius-xs); overflow: hidden; }
@@ -726,25 +736,36 @@ function pintarMrs(el, items, contador, vacioTitulo, vacioDetalle) {
 }
 
 function pintarBugs(el, bugs) {
-  if (!bugs.some((b) => b.total)) {
-    el.innerHTML = vacio("Sin bugs abiertos", "No se encontraron bugs abiertos en tus productos.");
+  if (!bugs.some((b) => b.total || b.cerrados)) {
+    el.innerHTML = vacio("Sin bugs", "No se encontraron bugs abiertos ni cerrados en tus productos.");
     return;
   }
-  // Una escala común: así se comparan los productos entre sí de un vistazo.
+  // La barra mide solo abiertos, lo que pide trabajo; los cerrados son la cifra
+  // de al lado. Escala común: así se comparan los productos de un vistazo.
   const max = Math.max(1, ...bugs.map((b) => b.total));
   const porProducto = new Map();
   for (const b of bugs) {
     if (!porProducto.has(b.productoNombre)) porProducto.set(b.productoNombre, []);
     porProducto.get(b.productoNombre).push(b);
   }
-  el.innerHTML = [...porProducto.entries()].map(([producto, lista]) => `
-    <div class="bugs-producto">${esc(producto)}</div>
-    <div class="bars">${lista.map((b) => `
+  const cifra = (n, url, clase) =>
+    n ? `<a class="v ${clase}" href="${esc(url)}" target="_blank" rel="noopener">${n}</a>` : `<span class="v ${clase}">0</span>`;
+  el.innerHTML = [...porProducto.entries()].map(([producto, lista]) => {
+    const abiertos = lista.reduce((a, b) => a + b.total, 0);
+    const cerrados = lista.reduce((a, b) => a + (b.cerrados || 0), 0);
+    return `
+    <div class="bugs-producto">${esc(producto)}
+      <span class="suma">${abiertos} abiertos · ${cerrados} cerrados</span></div>
+    <div class="bars">
+      <div class="bar bar-cab" aria-hidden="true"><span>Estado</span><span></span><span>Abiertos</span><span>Cerrados</span></div>
+      ${lista.map((b) => `
       <div class="bar">
         <a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.estado)}</a>
         <div class="track" aria-hidden="true"><div class="fill" style="width:${(b.total / max) * 100}%"></div></div>
-        <span class="v">${b.total}</span>
-      </div>`).join("")}</div>`).join("");
+        ${cifra(b.total, b.url, "")}
+        ${cifra(b.cerrados || 0, b.urlCerrados, "cerr")}
+      </div>`).join("")}</div>`;
+  }).join("");
 }
 
 /** Nombre en español y tono de cada estado de GitLab. Lo sano no se tiñe. */
@@ -975,6 +996,7 @@ const ESTADOS_ACTIVOS = ["New", "To Analysis", "In Analysis", "To Develop", "In 
 
 function pintarKpis(s) {
   const bugsTotales = s.bugs.reduce((a, b) => a + b.total, 0);
+  const bugsCerrados = s.bugs.reduce((a, b) => a + (b.cerrados || 0), 0);
   const bugsActivos = s.bugs.filter((b) => ESTADOS_ACTIVOS.includes(b.estado)).reduce((a, b) => a + b.total, 0);
   // [etiqueta, cifra, alerta, destino, icono, tono]
   const items = [
@@ -983,7 +1005,8 @@ function pintarKpis(s) {
     ["Mis MRs abiertos", s.mrsAuthored.length, false, "#tareas", "i-mr", "var(--success)"],
     ["To-Do pendientes", s.todos.length, false, "#tareas", "i-todo", "var(--accent-violeta)"],
     ["Bugs activos", bugsActivos, false, "#h-bugs", "i-bicho", "var(--danger)"],
-    ["Bugs totales", bugsTotales, false, "#h-bugs", "i-capas", "var(--text-muted)"]
+    ["Bugs abiertos", bugsTotales, false, "#h-bugs", "i-capas", "var(--text-muted)"],
+    ["Bugs cerrados", bugsCerrados, false, "#h-bugs", "i-ok", "var(--text-muted)"]
   ];
   $("kpis").innerHTML = items.map(([l, n, alerta, destino, icono, tono]) =>
     `<a class="kpi ${alerta ? "kpi-alerta" : ""}" href="${destino}" style="--tono:${tono}">

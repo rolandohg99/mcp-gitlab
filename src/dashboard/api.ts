@@ -142,18 +142,28 @@ export class DashboardApi {
         const porProducto = await mapLimit(productos, 3, async (p) => {
           const grupo = `${raiz}/${p.slug}`;
           try {
-            return await mapLimit(BUG_STATES, 2, async (state) => {
+            // Solo el conteo (x-total, per_page=1): abiertos y cerrados de cada estado.
+            const contar = async (state: string, estado: "opened" | "closed") => {
               const { headers } = await this.client.get(`/groups/${encodeProject(grupo)}/issues`, {
                 labels: state,
-                state: "opened",
+                state: estado,
                 per_page: 1
               });
+              return Number(headers.get("x-total") ?? 0);
+            };
+            const lista = (state: string, estado: "opened" | "closed") =>
+              `${this.config.gitlabUrl}/groups/${grupo}/-/issues?label_name[]=${encodeURIComponent(state)}&state=${estado}`;
+            return await mapLimit(BUG_STATES, 2, async (state) => {
+              const [total, cerrados] = await Promise.all([contar(state, "opened"), contar(state, "closed")]);
               return {
                 producto: p.slug,
                 productoNombre: p.nombre,
                 estado: state.replace("Bug :: ", ""),
-                total: Number(headers.get("x-total") ?? 0),
-                url: `${this.config.gitlabUrl}/groups/${grupo}/-/issues?label_name[]=${encodeURIComponent(state)}&state=opened`
+                /** Abiertos: lo que los KPIs y las barras miden. */
+                total,
+                cerrados,
+                url: lista(state, "opened"),
+                urlCerrados: lista(state, "closed")
               };
             });
           } catch (error) {

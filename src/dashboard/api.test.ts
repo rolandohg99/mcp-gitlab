@@ -72,5 +72,24 @@ test("summary: cuenta los 9 estados del flujo de bugs y solo issues abiertos", a
     s.bugs.map((b) => b.estado),
     ["New", "To Analysis", "In Analysis", "To Develop", "In Development", "To Test", "In Test", "Done", "Deployed"]
   );
-  assert.ok(consultas.length === 9 && consultas.every((q) => q.state === "opened"));
+  assert.equal(consultas.filter((q) => q.state === "opened").length, 9);
+});
+
+test("summary: cada estado trae también sus cerrados", async () => {
+  process.env.DASHBOARD_PRODUCTS = "sigo";
+  const cliente = clienteFalso({});
+  const espia = cliente as unknown as { get: (r: string, q?: Record<string, unknown>) => Promise<unknown> };
+  const original = espia.get;
+  const estados: string[] = [];
+  espia.get = async (ruta, q) => {
+    const r = (await original(ruta, q)) as { data: unknown; headers: Headers };
+    if (q?.labels) estados.push(String(q.state));
+    // Abiertos 3 (del falso); cerrados 7.
+    return q?.state === "closed" ? { ...r, headers: new Headers({ "x-total": "7" }) } : r;
+  };
+
+  const s = await api(cliente).summary("ana");
+  assert.equal(estados.filter((e) => e === "closed").length, 9);
+  assert.ok(s.bugs.every((b) => b.total === 3 && b.cerrados === 7));
+  assert.ok(s.bugs.every((b) => b.urlCerrados.includes("state=closed")));
 });
