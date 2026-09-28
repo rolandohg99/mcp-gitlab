@@ -178,11 +178,14 @@
   /* overflow: clip y no hidden: recorta las esquinas sin romper la cabecera sticky. */
   .pipes { overflow: clip; --n-env: 0; }
   body[data-vista="pipelines"] .pipes-cabecera,
-  body[data-vista="pipelines"] .pipe { grid-template-columns: minmax(200px, 440px) 104px repeat(var(--n-env), 56px) 96px 1fr; }
+  body[data-vista="pipelines"] .pipe { grid-template-columns: minmax(140px, 440px) 96px repeat(var(--n-env), 52px) 84px 1fr; }
   /* En inicio la tabla vive en una columna: altura acotada y "Ver todos" lleva
      a la vista completa. Ahí la cabecera se pega a la tarjeta, no a la página. */
   body:not([data-vista="pipelines"]) .pipes { max-height: 760px; overflow-y: auto; overscroll-behavior: contain; }
   .pipes-bloque { container: pipes / inline-size; }
+  /* clip y no hidden (el de .card): hidden haría de la tarjeta el contenedor
+     de scroll y la cabecera de columnas dejaría de pegarse al desplazar. */
+  .pipes-tarjeta { overflow: clip; }
   .pipes-cabecera, .pipe {
     display: grid; align-items: center; column-gap: var(--space-3);
     /* El nombre no pasa de 440px y el sobrante va a una pista vacía al final:
@@ -264,6 +267,24 @@
     .pipe .env-nada { display: none; }
     .pipe .c-fecha { margin-left: auto; }
   }
+  @container pipes (max-width: 800px) {
+    body[data-vista="pipelines"] .buscar { width: 100%; }
+    body[data-vista="pipelines"] .herramientas { width: 100%; }
+    body[data-vista="pipelines"] .pipes-cabecera { display: none; }
+    body[data-vista="pipelines"] .pipe { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding-block: var(--space-3); }
+    body[data-vista="pipelines"] .c-repo { flex: 1 1 calc(100% - 120px); }
+    body[data-vista="pipelines"] .c-estado { flex: none; }
+    body[data-vista="pipelines"] .pipe .c-env {
+      min-height: 22px; padding: 0 6px;
+      border: 1px solid var(--border-strong); border-radius: var(--radius-xs);
+      font-size: var(--text-xs);
+    }
+    body[data-vista="pipelines"] .pipe .c-env .env-nombre {
+      position: static; width: auto; height: auto; overflow: visible; clip-path: none;
+    }
+    body[data-vista="pipelines"] .pipe .env-nada { display: none; }
+    body[data-vista="pipelines"] .pipe .c-fecha { margin-left: auto; }
+  }
 
   /* ---- horas: un recuadro por día ----
      Lo completo guarda silencio (solo un filo verde); lo parcial se tiñe de
@@ -299,6 +320,8 @@
   .dia-vacio .dia-caja { background: transparent; border: 1px dashed var(--danger-line); }
   .dia-vacio .h { color: var(--danger); }
   .dia-libre .dia-caja { background: transparent; border-color: transparent; }
+  .dia-sindatos .dia-caja { background: transparent; border: 1px dashed var(--border-strong); }
+  .dia-sindatos .h { color: var(--text-muted); }
   .dia-hoy .dia-caja { border: 2px solid var(--primary-solid); }
   .dia-hoy .d { color: var(--primary); font-weight: 600; }
   .dia[aria-pressed="true"] .dia-caja { outline: 2px solid var(--primary); outline-offset: 3px; }
@@ -616,7 +639,7 @@
           </div>
           <a class="ver-todo" href="#pipelines">Ver todos <svg width="14" height="14" aria-hidden="true"><use href="#i-chevron"/></svg></a>
         </div>
-        <div id="pipelines" class="pipes"></div>
+        <div id="lista-pipelines" class="pipes"></div>
       </div>
     </section>
 
@@ -953,7 +976,7 @@ function filaPipeline(p, entornos) {
     </div>`;
 }
 
-$("pipelines").addEventListener("click", (e) => {
+$("lista-pipelines").addEventListener("click", (e) => {
   const boton = e.target.closest(".carpeta-head");
   if (!boton) return;
   const abrir = boton.getAttribute("aria-expanded") !== "true";
@@ -968,13 +991,13 @@ document.querySelectorAll(".seg").forEach((boton) => {
   boton.addEventListener("click", () => {
     filtroPipes = boton.dataset.filtro;
     document.querySelectorAll(".seg").forEach((b) => b.setAttribute("aria-pressed", String(b === boton)));
-    pintarPipelines($("pipelines"), pipelinesCache);
+    pintarPipelines($("lista-pipelines"), pipelinesCache);
   });
 });
 
 $("buscar-pipes").addEventListener("input", (e) => {
   busquedaPipes = e.target.value;
-  pintarPipelines($("pipelines"), pipelinesCache);
+  pintarPipelines($("lista-pipelines"), pipelinesCache);
 });
 
 function pintarTodos(el, todos, contador) {
@@ -1188,7 +1211,8 @@ function pintarHoras(r) {
     `<span><span class="big">${r.horasSemana} h</span><span class="sub">esta semana</span></span>` +
     `<span><span class="big">${r.totalHoras} h</span><span class="sub">en ${r.dias.length} días</span></span>`;
 
-  const pendientes = r.diasLaborablesSinRegistro;
+  // Con total parcial no se sabe qué días faltan de verdad: no se acusa ninguno.
+  const pendientes = r.parcial ? [] : r.diasLaborablesSinRegistro;
   const n = pendientes.length;
   $("horas-aviso").innerHTML = n
     ? `<div class="alert alert-warning alert-en-card">
@@ -1198,7 +1222,7 @@ function pintarHoras(r) {
     : "";
   if (r.parcial) {
     $("horas-aviso").innerHTML += `<div class="alert alert-warning alert-en-card">
-      <div><strong>Total parcial:</strong> hay más registros de los que se pudieron leer.</div>
+      <div><strong>Total parcial:</strong> hay más registros de los que se pudieron leer. Los días en gris pueden tener horas que no llegaron a cargarse; revísalos en GitLab antes de volver a registrarlos.</div>
     </div>`;
   }
 
@@ -1209,10 +1233,11 @@ function pintarHoras(r) {
     // Un fin de semana con horas se muestra como cualquier día; sin horas, hueco.
     let clase = d.horas >= JORNADA ? "dia-completo"
       : d.horas > 0 ? "dia-parcial"
-      : d.laborable ? "dia-vacio" : "dia-libre";
+      : d.laborable ? (r.parcial ? "dia-sindatos" : "dia-vacio") : "dia-libre";
     if (d.fecha === hoy) clase += " dia-hoy";
-    const estado = d.horas > 0 ? `${d.horas} horas` : d.laborable ? "sin registrar" : "fin de semana";
-    const cifra = d.horas || (d.laborable ? "0" : "");
+    const estado = d.horas > 0 ? `${d.horas} horas`
+      : d.laborable ? (r.parcial ? "sin datos (total parcial)" : "sin registrar") : "fin de semana";
+    const cifra = d.horas || (d.laborable ? (r.parcial ? "–" : "0") : "");
     return `
       <button class="dia ${clase}" data-i="${i}" aria-pressed="false"
               aria-label="${esc(d.fecha)}, ${esc(estado)}${d.fecha === hoy ? ", hoy" : ""}">
@@ -1239,6 +1264,10 @@ function pintarHoras(r) {
   document.querySelectorAll(".dia").forEach((btn) => {
     btn.addEventListener("click", () => seleccionar(Number(btn.dataset.i)));
   });
+
+  // Lo último registrado, hoy incluido, es lo que se mira: la tira abre por el final.
+  const tira = $("horas-dias").parentElement;
+  tira.scrollLeft = tira.scrollWidth;
 
   const idxHoy = r.dias.findIndex((d) => d.fecha === hoy);
   const ultimoConHoras = r.dias.map((d, i) => (d.horas > 0 ? i : -1)).filter((i) => i >= 0).pop();
@@ -1282,7 +1311,7 @@ async function cargar() {
   $("refresh-txt").textContent = "Cargando…";
 
   ["assigned", "review", "mrs", "todos"].forEach((id) => cargando($(id), 3));
-  $("pipelines").innerHTML = esqueleto(4);
+  $("lista-pipelines").innerHTML = esqueleto(4);
   $("bugs").innerHTML = esqueleto(3);
 
   try {
@@ -1318,8 +1347,8 @@ async function cargar() {
     cargarAvisos();
 
     // Más lentos: no bloquean el render principal.
-    pedir("/api/pipelines").then((p) => pintarPipelines($("pipelines"), p))
-      .catch(() => { $("pipelines").innerHTML = vacio("No se pudieron leer los pipelines", "Pulsa Refrescar para reintentar."); });
+    pedir("/api/pipelines").then((p) => pintarPipelines($("lista-pipelines"), p))
+      .catch(() => { $("lista-pipelines").innerHTML = vacio("No se pudieron leer los pipelines", "Pulsa Refrescar para reintentar."); });
 
     $("stamp").textContent = "Actualizado a las " + new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
   } catch (error) {
@@ -1365,8 +1394,21 @@ function vistaActual() {
   return VISTAS.includes(v) ? v : "inicio";
 }
 
+let vistaAnterior = null;
+
 function aplicarVista() {
   const vista = vistaActual();
+  const cambio = vistaAnterior !== null && vistaAnterior !== vista;
+  // Filtro y búsqueda de pipelines solo existen en su vista: al salir, se
+  // quitan, o inicio mostraría una tabla filtrada sin control para deshacerlo.
+  if (vistaAnterior === "pipelines" && vista !== "pipelines" && (filtroPipes !== "todos" || busquedaPipes)) {
+    filtroPipes = "todos";
+    busquedaPipes = "";
+    $("buscar-pipes").value = "";
+    document.querySelectorAll(".seg").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.filtro === "todos")));
+    if (pipelinesCache) pintarPipelines($("lista-pipelines"), pipelinesCache);
+  }
+  vistaAnterior = vista;
   document.body.dataset.vista = vista;
   document.querySelectorAll("[data-vistas]").forEach((el) => {
     el.hidden = !el.dataset.vistas.split(" ").includes(vista);
@@ -1376,6 +1418,11 @@ function aplicarVista() {
     else a.removeAttribute("aria-current");
   });
   cerrarMenu(false);
+  // Una vista nueva empieza arriba; un ancla de sección (#h-bugs) va a su sitio
+  // cuando ya existe en la vista que queda visible.
+  const ancla = location.hash.startsWith("#h-") ? document.getElementById(location.hash.slice(1)) : null;
+  if (ancla) ancla.scrollIntoView();
+  else if (cambio) scrollTo(0, 0);
 }
 
 function abrirMenu() {
