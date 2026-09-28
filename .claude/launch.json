@@ -6,6 +6,14 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--yes", "http-server", "public", "-p", "5190", "-c-1", "--silent"],
       "port": 5190
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["dist/dashboard/cli.js"],
+      "env": { "DASHBOARD_PORT": "5188", "TIMELOG_GROUP": "" },
+      "port": 5188,
+      "url": "http://127.0.0.1:5188"
     }
   ]
 }
