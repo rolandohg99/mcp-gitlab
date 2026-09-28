@@ -1,8 +1,8 @@
 import type { Config } from "../config.js";
-import { encodeProject, GitLabClient } from "../gitlab/client.js";
+import { encodeProject, GitLabClient, GitLabError } from "../gitlab/client.js";
+import { detectarProductos, raizProductos, type Producto } from "./productos.js";
+import { mapLimit } from "./proyectos.js";
 import { pipelinesVigilados } from "./snapshot.js";
-
-const COLLAB = "comsatel/development/products/sigo/collaboration";
 
 /** Estados de workflow que el equipo usa como labels con scope. */
 const BUG_STATES = [
@@ -94,7 +94,8 @@ export class DashboardApi {
   }
 
   async summary(username: string) {
-    const collab = encodeProject(COLLAB);
+    const raiz = raizProductos();
+    const productos = await detectarProductos(this.client, username);
 
     const [assigned, mrsAuthored, mrsToReview, todos, bugs, milestones] = await Promise.all([
       settle("issues asignados", async () =>
@@ -119,24 +120,38 @@ export class DashboardApi {
         }));
       }),
       settle("bugs por estado", async () => {
-        const counts: Array<{ estado: string; total: number; url: string }> = [];
-        for (const state of BUG_STATES) {
-          const { headers } = await this.client.get(`/projects/${collab}/issues`, {
+        // Las labels `Bug :: …` viven en la raíz: sirven para todos los productos.
+        // Se cuenta a nivel de grupo, así entran los bugs de cualquier repo del producto.
+        const pares = productos.flatMap((p) => BUG_STATES.map((state) => ({ p, state })));
+        return mapLimit(pares, 6, async ({ p, state }) => {
+          const grupo = `${raiz}/${p.slug}`;
+          const { headers } = await this.client.get(`/groups/${encodeProject(grupo)}/issues`, {
             labels: state,
             state: "opened",
             per_page: 1
           });
-          counts.push({
+          return {
+            producto: p.slug,
+            productoNombre: p.nombre,
             estado: state.replace("Bug :: ", ""),
             total: Number(headers.get("x-total") ?? 0),
-            url: `${this.config.gitlabUrl}/${COLLAB}/-/issues?label_name[]=${encodeURIComponent(state)}&state=opened`
-          });
-        }
-        return counts;
+            url: `${this.config.gitlabUrl}/groups/${grupo}/-/issues?label_name[]=${encodeURIComponent(state)}&state=opened`
+          };
+        });
       }),
       settle("milestones", async () => {
-        const list = await this.client.getAll<any>(`/projects/${collab}/milestones`, { state: "active" }, 10);
-        return list.map((m) => ({ id: m.id, titulo: m.title, vence: m.due_date }));
+        const porProducto = await mapLimit(productos, 6, async (p) => {
+          try {
+            const collab = encodeProject(`${raiz}/${p.slug}/collaboration`);
+            const list = await this.client.getAll<any>(`/projects/${collab}/milestones`, { state: "active" }, 10);
+            return list.map((m) => ({ id: m.id, titulo: m.title, vence: m.due_date, producto: p.slug }));
+          } catch (error) {
+            // Producto sin repo `collaboration` (clocator, comunes): no tiene milestones.
+            if (error instanceof GitLabError && error.status === 404) return [];
+            throw error;
+          }
+        });
+        return porProducto.flat();
       })
     ]);
 
@@ -145,6 +160,7 @@ export class DashboardApi {
       .filter((e): e is string => Boolean(e));
 
     return {
+      productos: productos satisfies Producto[],
       assigned: assigned.data ?? [],
       mrsAuthored: mrsAuthored.data ?? [],
       mrsToReview: mrsToReview.data ?? [],
@@ -152,8 +168,7 @@ export class DashboardApi {
       bugs: bugs.data ?? [],
       milestones: milestones.data ?? [],
       errors,
-      gitlabUrl: this.config.gitlabUrl,
-      collaboration: `${this.config.gitlabUrl}/${COLLAB}`
+      gitlabUrl: this.config.gitlabUrl
     };
   }
 
@@ -168,4 +183,3 @@ export class DashboardApi {
 
 }
 
-export { COLLAB };
