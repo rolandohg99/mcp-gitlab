@@ -8,12 +8,91 @@
   "bin": {
     "dev-gitlab-mcp": "dist/index.js"
   },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "check": "tsc --noEmit && tsc -p tsconfig.api.json",
+    "dashboard": "node dist/dashboard/cli.js",
+    "icon": "node scripts/make-icon.mjs",
+    "app": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --win",
+    "web": "node dist/web/server.js",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "vercel-build": "echo \"sin build: las funciones se compilan solas\"",
+    "check:api": "tsc -p tsconfig.api.json"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "ssh2": "^1.17.0",
     "zod": "^4.5.4"
   },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "@types/ssh2": "^1.15.6",
+    "electron": "^41.7.1",
+    "electron-builder": "^26.15.3",
+    "typescript": "^7.0.2"
+  },
   "main": "dist/desktop/main.js",
+  "build": {
+    "appId": "com.comsatel.panel-gitlab",
+    "productName": "Panel GitLab SIGO",
+    "copyright": "© 2026 nrolando",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "public/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "PanelGitLabSIGO-${version}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "PanelGitLabSIGO-${version}-${arch}.${ext}",
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "LSUIElement": false
+      }
+    },
+    "dmg": {
+      "title": "Panel GitLab SIGO"
+    }
+  },
   "overrides": {
     "@noble/hashes": "^1.8.0"
   }
