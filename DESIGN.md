@@ -2,29 +2,32 @@
 name: Panel de desarrollo Comsatel
 description: Panel diario del desarrollador para issues, merge requests, pipelines y horas registradas en GitLab.
 colors:
-  bg: "#09090b"
-  surface: "#111114"
-  surface-2: "#18181c"
-  surface-3: "#1f1f24"
-  text: "#ededef"
-  text-muted: "#9095a0"
-  border: "rgba(255, 255, 255, 0.07)"
-  border-strong: "rgba(255, 255, 255, 0.12)"
-  border-hover: "rgba(255, 255, 255, 0.22)"
-  border-control: "#6b7080"
-  neutral-mark: "#767b88"
-  primary: "#8b95f0"
-  primary-solid: "#5663cc"
-  primary-hover: "#4f5bc4"
-  primary-soft: "rgba(94, 106, 210, 0.14)"
-  success: "#3fd68c"
-  success-soft: "rgba(63, 214, 140, 0.12)"
-  warning: "#f5b544"
-  warning-soft: "rgba(245, 181, 68, 0.12)"
-  danger: "#ff6b6b"
-  danger-solid: "#c93434"
-  danger-soft: "rgba(255, 107, 107, 0.12)"
-  info: "#4fc3f7"
+  bg: "#0b1220"
+  surface: "#111b2e"
+  surface-2: "#16223a"
+  surface-3: "#1c2a46"
+  text: "#e6edf7"
+  text-muted: "#94a3b8"
+  border: "rgba(148, 163, 184, 0.12)"
+  border-strong: "rgba(148, 163, 184, 0.22)"
+  border-hover: "rgba(148, 163, 184, 0.36)"
+  border-control: "#5b6b86"
+  neutral-mark: "#6b7a94"
+  primary: "#60a5fa"
+  primary-solid: "#2563eb"
+  primary-hover: "#1d4ed8"
+  primary-soft: "rgba(59, 130, 246, 0.16)"
+  success: "#34d399"
+  success-soft: "rgba(52, 211, 153, 0.14)"
+  warning: "#fbbf24"
+  warning-soft: "rgba(251, 191, 36, 0.14)"
+  danger: "#f87171"
+  danger-solid: "#dc2626"
+  danger-soft: "rgba(248, 113, 113, 0.14)"
+  info: "#38bdf8"
+  sidebar: "#0d1526"
+  accent-violeta: "#a78bfa"
+  violeta-soft: "rgba(167, 139, 250, 0.16)"
   on-solid: "#ffffff"
 typography:
   title:
@@ -142,9 +145,9 @@ components:
 
 ## Overview
 
-**Creative North Star: "La torre de control"**
+**Creative North Star: "La sala de guardia"**
 
-Un panel oscuro que se consulta muchas veces al día, en el puesto de trabajo.
+Un panel azul marino que se consulta muchas veces al día, en el puesto de trabajo.
 Al abrirlo, el desarrollador sabe en segundos qué está roto, qué espera su
 revisión y si su registro de horas está al día. La interfaz se retira y deja
 hablar a los datos: una sola fuente del sistema, capas planas separadas por
@@ -156,9 +159,11 @@ expresión. Una misma hoja, `public/app.css`, sirve a las tres pantallas (panel,
 login OAuth y conexión por token), y ningún recurso sale de fuera del proyecto.
 
 **Key Characteristics:**
-- Tema oscuro único (`color-scheme: dark`).
-- Lo sano en silencio: gris neutro para lo correcto, color solo para fallo,
-  pendiente o sin registrar.
+- Tema oscuro único (`color-scheme: dark`), en azul marino con bordes azulados.
+- Menú lateral fijo y vistas por hash (`#inicio`, `#tareas`, `#pipelines`).
+- Lo sano en silencio: neutro para lo correcto, color solo para fallo,
+  pendiente o sin registrar. Los iconos de las lecturas sí llevan su color
+  identificativo; las cifras no.
 - Profundidad plana: tonos y bordes finos; una única sombra para lo que flota.
 - Fuente del sistema con cifras tabulares en todo número que se compara.
 - 36px de control con ratón, 44px con dedo.
@@ -166,48 +171,45 @@ login OAuth y conexión por token), y ningún recurso sale de fuera del proyecto
 
 ## Colors
 
-Neutros casi negros en cuatro tonos, un gris de reposo, un acento índigo partido
-en texto y relleno, y cuatro colores de estado con su variante translúcida.
+Azules marino en cinco tonos (con el del menú), un acento azul partido en texto
+y relleno, cuatro colores de estado y un violeta para To-Do. Todos los pares se
+comprueban con `node scripts/contraste.mjs` (también dentro de `npm test`).
 
 ### Primary
-- **Índigo señal** (`primary`): enlaces, iconos, anillo de foco, día de hoy y
-  marca. 6.5:1 sobre `surface-2`.
-- **Índigo sólido** (`primary-solid`, `primary-hover`): solo como relleno del
-  botón primario; blanco encima 5.2:1 y 5.8:1. El hover oscurece, no aclara.
+- **Azul señal** (`primary`, `#60a5fa`): enlaces, iconos de título, anillo de
+  foco, opción activa del menú y "Ver todas". ≥ 4.5:1 sobre `surface` y `surface-2`.
+- **Azul sólido** (`primary-solid`, `#2563eb`; hover `#1d4ed8`): relleno del
+  botón primario y borde del día de hoy. Blanco encima 5.17:1. `#3b82f6`, el
+  azul de la maqueta, se descartó como relleno: el blanco encima solo da 3.68:1.
 
 ### Neutral
-- **Negro de fondo** (`bg`): lienzo y barra superior.
-- **Grafito** (`surface`): tarjetas, tira de resumen y cajas de acceso.
-- **Grafito elevado** (`surface-2`): botones, campos, panel de avisos y hover de filas.
-- **Grafito de paso** (`surface-3`): hover de botones y de filas dentro del panel de avisos.
-- **Tiza** (`text`): texto principal, 17.0:1 sobre `bg`.
-- **Ceniza** (`text-muted`): metadatos, etiquetas, contadores; 6.3:1 sobre
-  `surface` y 5.5:1 en la capa más clara.
-- **Gris de reposo** (`neutral-mark`): barras de jornada completa, barras de
-  bugs, puntos de estado sano y separadores `·`. 4.2:1 sobre `surface-2`.
-- **Límite de campo** (`border-control`): contorno de inputs y selects, 3.6:1 o más.
-- **Bordes de vidrio** (`border`, `border-strong`, `border-hover`): separadores
-  y contornos de botones.
+- **Noche** (`bg`, `#0b1220`): lienzo y cabecera.
+- **Menú** (`sidebar`, `#0d1526`): barra lateral.
+- **Marino** (`surface`, `#111b2e`): tarjetas, KPIs y cajas de acceso.
+- **Marino elevado** (`surface-2`): hover de filas, campos y panel de avisos.
+- **Marino de paso** (`surface-3`): recuadros de horas, avatar y contadores.
+- **Hielo** (`text`, `#e6edf7`) y **pizarra** (`text-muted`, `#94a3b8`).
+- **Reposo** (`neutral-mark`): puntos de estado sano y separadores `·`.
+- **Bordes** (`border`, `border-strong`, `border-hover`): azul pizarra
+  translúcido, nunca blanco.
 
 ### Estados
-- **Verde operativo** (`success`): solo el punto de un pipeline o despliegue
-  correcto y el icono de avisos de MR. Nunca rellena superficies grandes.
-- **Ámbar pendiente** (`warning`): en curso, jornada parcial, revisiones que te
-  esperan, aviso de días sin registrar.
-- **Rojo incidencia** (`danger`, `danger-solid`): fallo, conflicto, día
-  laborable sin registrar, contador de avisos sin leer.
-- **Cian aviso** (`info`): iconos de To-Do, despliegue y actualización.
+- **Verde** (`success`): pipeline o despliegue correcto, icono de "Mis MRs",
+  filo de la jornada completa.
+- **Ámbar** (`warning`): en curso, jornada parcial, MRs que esperan tu revisión.
+- **Rojo** (`danger`): fallo, conflicto, laborable sin registrar, bugs.
+- **Violeta** (`accent-violeta`): To-Do pendientes.
+- **Cian** (`info`): iconos de despliegue y actualización en los avisos.
 
 ### Named Rules
-**La regla del silencio.** Lo que está bien no se tiñe. Un pipeline correcto se
-lee en ceniza con un punto verde de 6px; uno roto, en rojo. Si una pantalla sana
-se ve colorida, algo está mal diseñado.
+**La regla del silencio.** Lo que está bien no se tiñe: la jornada completa es
+un recuadro neutro con un filo verde, no un bloque verde.
 
-**La regla del acento partido.** El índigo claro es para texto; el sólido es para
+**La regla del acento partido.** El azul claro es para texto; el sólido, para
 relleno. Nunca se intercambian.
 
-**La regla sin opacidad.** Para atenuar texto se cambia su color, nunca su
-opacidad: con opacidad el contraste cae por debajo de 3:1.
+**La regla del contraste medido.** Un token nuevo o cambiado entra en `PARES` de
+`scripts/contraste.mjs`; si el script falla, el tono se ajusta.
 
 ## Typography
 
@@ -236,28 +238,24 @@ solo para el token, que es un dato literal.
 
 ## Layout
 
-Columna central de hasta 1560px con márgenes laterales de 24px (12px en móvil).
-La barra superior es fija, de 56px y siempre en una sola fila.
+Menú lateral fijo de 232px y contenido de hasta 1600px con márgenes de 24px
+(12px en móvil). La cabecera es fija: título, subtítulo con usuario y
+productos, campana, hora de actualización y Refrescar con borde azul.
 
-- **Resumen:** una sola tira con separadores de 1px, columnas de 150px como
-  mínimo (cinco en escritorio, dos en móvil). Cada lectura enlaza a su sección.
-- **Horas:** tarjeta de ancho completo; barras de 40px de ancho mínimo en una
-  tira con scroll horizontal y el detalle del día debajo (220px con scroll).
-- **Listas:** rejilla automática de 380px como mínimo; cuerpo con scroll interno
-  de 420px (340px en móvil) y `overscroll-behavior: contain`.
-- **Pipelines:** una sola tarjeta con una matriz: una fila por repositorio,
-  agrupadas en carpetas plegables, sin scroll interno. Columnas: repositorio
-  (hasta 440px), pipeline (104px), una columna de 52px por entorno en orden de
-  promoción (dev, qa, pre, prod) y fecha (96px). El ancho sobrante va a una
-  pista vacía al final. La cabecera de columnas queda fija bajo la barra
-  superior. Por debajo de 760px cada fila pasa a dos líneas con chips de entorno
-  etiquetados. Nunca `columns`.
-- **Puntos de corte:** 1100px oculta la hora de actualización; 900px oculta el
-  usuario y deja refrescar y cerrar sesión como botones de solo icono (conservan
-  su nombre accesible); 720px compacta márgenes y fija el panel de avisos a lo
-  ancho; 400px reduce la marca.
-- **Ritmo:** escala de 4px. Separación de 16px entre bloques y de 12px entre las
-  tarjetas de carpeta.
+- **Menú:** ≥ 1024px completo; 640–1023px solo iconos (72px, con `title` y nombre
+  accesible), incluida la ventana mínima de escritorio (900px); < 640px oculto
+  tras un botón, como capa sobre el contenido que se cierra con Escape o
+  tocando fuera, devolviendo el foco al botón.
+- **Vistas:** `#inicio` muestra todo; `#tareas`, issues, MRs y To-Do a ancho
+  completo; `#pipelines`, la tabla completa con filtros. Un hash desconocido es
+  inicio.
+- **KPIs:** seis tarjetas (6 → 3 → 2 columnas por debajo de 1280px y 720px).
+- **Tablero de inicio (≥ 1100px):** Mis tareas y los dos MRs a la izquierda
+  (2fr), pipelines a la derecha (3fr); bugs y To-Do debajo. Por debajo de
+  1100px, una columna.
+- **Pipelines:** la disposición responde al ancho de la tarjeta (container
+  query), no de la ventana. En inicio, 760px de alto con scroll interno.
+- **Ritmo:** escala de 4px; 16px entre bloques.
 
 ## Elevation & Depth
 
@@ -275,10 +273,10 @@ Una tarjeta con sombra es una tarjeta que finge flotar.
 
 ## Shapes
 
-Radios contenidos: 4px en chips, código, barras y muestras; 6px en botones y
-campos; 8px en tarjetas, tira de resumen, cajas de acceso y panel de avisos.
-Píldora completa solo para el contador de no leídos y los puntos de estado. Los
-días laborables sin registrar llevan contorno discontinuo rojo.
+4px en chips y código; 8px en botones, campos, iconos de KPI y recuadros de
+horas; 12px en tarjetas, KPIs, cajas de acceso y panel de avisos. Píldora para
+contadores, avatar y puntos. El laborable sin registrar lleva contorno rojo
+discontinuo.
 
 ## Components
 
@@ -320,7 +318,7 @@ días laborables sin registrar llevan contorno discontinuo rojo.
   hasta dos jobs fallidos en rojo ("y N más").
 
 ### Cards / Containers
-- **Corner Style:** 8px.
+- **Corner Style:** 12px.
 - **Background:** `surface`; cabecera de 48px separada por un borde.
 - **Shadow Strategy:** ninguna (ver Elevation & Depth).
 - **Internal Padding:** filas de 12px por 16px.
@@ -331,11 +329,14 @@ días laborables sin registrar llevan contorno discontinuo rojo.
 - **Placeholder:** ceniza.
 
 ### Navigation
-- **Barra superior:** marca SVG propia (cuadro con tres barras), título, usuario,
-  hora de actualización, campana con contador, refrescar y cerrar sesión.
-- **Resumen:** enlaces de ancla a cada sección, con `scroll-margin-top` para no
-  quedar debajo de la barra fija. La lectura que pide acción lleva cifra ámbar y
-  un punto ámbar.
+- **Menú lateral:** logo `</>` en cuadro azul translúcido, nombre, opciones con
+  icono (la activa, fondo azul translúcido y `aria-current="page"`) y tarjeta de
+  usuario con iniciales, nombre, `@usuario · Comsatel` y cerrar sesión.
+- **KPIs:** icono de 40px en cuadro tintado de su color, cifra, etiqueta y
+  chevron; enlazan a su vista o sección. Solo "Esperan mi revisión" tiñe la
+  cifra, y solo si es mayor que cero.
+- **Tarjetas:** título con icono azul, contador en píldora y "Ver todas" hacia
+  la vista completa (oculto dentro de esa vista).
 
 ### Estados de carga, vacío y error
 - **Esqueleto:** líneas con brillo de 1.4s (estático con movimiento reducido).
@@ -343,10 +344,11 @@ días laborables sin registrar llevan contorno discontinuo rojo.
 - **Error:** dice qué falló y cómo recuperarse ("Pulsa Refrescar para reintentar").
 
 ### Gráfico de horas
-- Barra por día: gris de reposo si la jornada está completa (9h), ámbar si es
-  parcial, contorno discontinuo rojo con un "0" rojo si es laborable sin
-  registrar, y columna vacía en fin de semana. El día seleccionado lleva contorno
-  índigo y el de hoy, su etiqueta en índigo.
+- Un recuadro de 72px por día con sus horas y el día de la semana, y la fecha
+  debajo. Completa: neutro con filo verde inferior; parcial: ámbar translúcido;
+  laborable sin registrar: contorno rojo discontinuo con un "0" rojo; fin de
+  semana sin horas: hueco. Hoy lleva borde `primary-solid` de 2px; el
+  seleccionado, anillo `primary`. Totales a la derecha con icono de reloj.
 
 ### Panel de avisos
 - Popover de 400px (fijo a lo ancho en móvil) con sombra flotante y entrada de
@@ -358,7 +360,7 @@ días laborables sin registrar llevan contorno discontinuo rojo.
 
 ### Do:
 - **Do** reservar `success` para puntos de 6px; el estado sano se lee en ceniza.
-- **Do** usar `primary` (#8b95f0) para texto y `primary-solid` (#5663cc) solo como relleno.
+- **Do** usar `primary` (#60a5fa) para texto y `primary-solid` (#2563eb) solo como relleno.
 - **Do** atenuar con `text-muted`, nunca con `opacity`.
 - **Do** calcular el contraste de cada pareja nueva de texto y fondo (4.5:1 texto, 3:1 controles).
 - **Do** mantener 44px de control con puntero táctil.
