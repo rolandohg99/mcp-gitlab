@@ -128,3 +128,55 @@ test("detectarProductos respeta DASHBOARD_PRODUCTS sin consultar eventos", async
   ]);
   assert.equal(llamadas.includes("/events"), false);
 });
+
+test("detectarProductos falla si no hay catálogo ni detección previa", async () => {
+  const cliente = {
+    getAll: async () => {
+      throw new Error("500");
+    }
+  } as unknown as GitLabClient;
+  await assert.rejects(detectarProductos(cliente, "ana"));
+});
+
+test("detectarProductos no espera indefinidamente a /events", async () => {
+  const { cliente } = clienteFalso({ issues: [{ project_id: 1 }] });
+  const lento = cliente as unknown as { getAll: (r: string, q?: unknown) => Promise<unknown[]> };
+  const original = lento.getAll;
+  lento.getAll = (ruta, q) => (ruta === "/events" ? new Promise(() => {}) : original(ruta, q));
+
+  const inicio = Date.now();
+  const productos = await detectarProductos(cliente, "ana", { timeoutEventosMs: 50 });
+  assert.deepEqual(productos, [{ slug: "sigo", nombre: "SIGO" }]);
+  assert.ok(Date.now() - inicio < 1000);
+});
+
+test("detectarProductos pide los MRs por revisar con scope=all", async () => {
+  const consultas: Array<Record<string, unknown>> = [];
+  const { cliente } = clienteFalso({});
+  const espia = cliente as unknown as { getAll: (r: string, q?: Record<string, unknown>) => Promise<unknown[]> };
+  const original = espia.getAll;
+  espia.getAll = (ruta, q) => {
+    if (ruta === "/merge_requests" && q) consultas.push(q);
+    return original(ruta, q);
+  };
+  await detectarProductos(cliente, "ana");
+  const revision = consultas.find((q) => q.reviewer_username === "ana");
+  assert.equal(revision?.scope, "all");
+});
+
+test("detectarProductos no fija una hora de caché si /events no llegó a tiempo", async () => {
+  const { cliente, llamadas } = clienteFalso({ issues: [{ project_id: 1 }] });
+  const lento = cliente as unknown as { getAll: (r: string, q?: unknown) => Promise<unknown[]> };
+  const original = lento.getAll;
+  lento.getAll = (ruta, q) => {
+    if (ruta === "/events") {
+      llamadas.push(ruta);
+      return new Promise(() => {});
+    }
+    return original(ruta, q);
+  };
+
+  await detectarProductos(cliente, "ana", { timeoutEventosMs: 30, ttlDegradadoMs: 0 });
+  await detectarProductos(cliente, "ana", { timeoutEventosMs: 30, ttlDegradadoMs: 0 });
+  assert.equal(llamadas.filter((r) => r === "/events").length, 2);
+});

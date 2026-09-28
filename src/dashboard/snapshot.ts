@@ -41,7 +41,15 @@ export interface Snapshot {
     /** Nombres de los jobs que fallaron, para decir *qué* se rompió. */
     fallidos: string[];
   }>;
-  horas: { horasHoy: number; faltan: number; completo: boolean; detalle: string; url: string } | null;
+  horas: {
+    horasHoy: number;
+    faltan: number;
+    completo: boolean;
+    detalle: string;
+    url: string;
+    /** No se pudieron leer todos los registros: la cifra es un mínimo. */
+    parcial: boolean;
+  } | null;
 }
 
 export async function construirSnapshot(
@@ -54,7 +62,7 @@ export async function construirSnapshot(
     client.getAll<any>("/issues", { scope: "assigned_to_me", state: "opened" }, 60).catch(() => []),
     client.get<any[]>("/todos", { state: "pending", per_page: 50 }).catch(() => ({ data: [] }) as any),
     client
-      .getAll<any>("/merge_requests", { reviewer_username: username, state: "opened" }, 40)
+      .getAll<any>("/merge_requests", { reviewer_username: username, state: "opened", scope: "all" }, 40)
       .catch(() => []),
     client.getAll<any>("/merge_requests", { scope: "created_by_me", state: "opened" }, 40).catch(() => []),
     pipelinesVigilados(client, username)

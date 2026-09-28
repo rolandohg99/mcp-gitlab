@@ -130,6 +130,9 @@ export async function buildTimelogReport(
   username: string,
   opciones: { dias?: number; grupos?: string[]; presupuestoMs?: number } = {}
 ): Promise<TimelogReport> {
+  // El presupuesto cuenta desde aquí: la detección de productos también
+  // consume el tiempo que Vercel da a la función.
+  const inicio = Date.now();
   const diasVentana = ventanaValida(opciones.dias);
   const fijo = process.env.TIMELOG_GROUP?.trim();
   const grupos =
@@ -147,7 +150,7 @@ export async function buildTimelogReport(
   const desde = new Date(`${primerDia}T00:00:00Z`);
 
   // Grupos en secuencia con un plazo común: son disjuntos, no hay duplicados.
-  const plazo = Date.now() + (opciones.presupuestoMs ?? PRESUPUESTO_MS);
+  const plazo = inicio + (opciones.presupuestoMs ?? PRESUPUESTO_MS);
   const todos: RawTimelog[] = [];
   let parcial = false;
   for (const grupo of grupos) {

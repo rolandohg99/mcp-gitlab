@@ -18,6 +18,7 @@ export interface ResumenHoras {
   faltan: number;
   completo: boolean;
   detalle: string;
+  parcial: boolean;
 }
 
 /** Horas registradas hoy. Ventana corta: es la consulta mas cara del ciclo. */
@@ -33,6 +34,7 @@ export async function consultarHorasDeHoy(
     horasHoy,
     faltan: Math.max(0, JORNADA - horasHoy),
     completo: horasHoy >= JORNADA,
-    detalle: (dia?.entradas ?? []).map((e) => `${e.horas} h · ${e.titulo}`).join("\n")
+    detalle: (dia?.entradas ?? []).map((e) => `${e.horas} h · ${e.titulo}`).join("\n"),
+    parcial: reporte.parcial
   };
 }

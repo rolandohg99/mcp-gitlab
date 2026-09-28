@@ -81,6 +81,15 @@ export function tocaAvisoDeHoras(previo: Estado, opciones: Partial<OpcionesAviso
 }
 
 export function avisoDeHoras(horas: NonNullable<Snapshot["horas"]>, forzar = false): Aviso | null {
+  if (horas.parcial) {
+    if (!forzar) return null;
+    return {
+      tipo: "horas",
+      titulo: `Al menos ${horas.horasHoy} h registradas hoy`,
+      cuerpo: "No se pudieron leer todos los registros; la cifra puede ser mayor.",
+      url: horas.url
+    };
+  }
   if (horas.completo) {
     if (!forzar) return null;
     return {
@@ -201,7 +210,10 @@ export function comparar(
 for (const p of snapshot.pipelines) {
     const antes = previo.pipelines[p.project];
     const repo = p.project.split("/").slice(-2).join("/");
-    const cambio = !antes || antes.id !== p.id || antes.status !== p.status;
+    // Un repo sin estado previo acaba de entrar al set vigilado (producto
+    // recién detectado, primera vuelta tras actualizar): se siembra, no se
+    // anuncia. Si no, cada cambio de productos dispararía una ráfaga de avisos.
+    const cambio = Boolean(antes) && (antes!.id !== p.id || antes!.status !== p.status);
 
     if (p.status === "failed" && cambio) {
       avisos.push({
@@ -243,7 +255,9 @@ Falló: ${p.fallidos.join(", ")}` : ""),
     }
   }
 
-  if (snapshot.horas && tocaAvisoDeHoras(previo, opciones)) {
+  // Con horas parciales la cifra es un mínimo: avisar "te faltan X h" podría
+  // ser falso. Se deja sin marcar para reintentar en la vuelta siguiente.
+  if (snapshot.horas && !snapshot.horas.parcial && tocaAvisoDeHoras(previo, opciones)) {
     const aviso = avisoDeHoras(snapshot.horas);
     if (aviso) avisos.push(aviso);
     estado.horasAvisadas = fechaLocal();

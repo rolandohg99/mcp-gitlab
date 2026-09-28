@@ -18,6 +18,31 @@ const TTL_DETECCION_MS = 60 * 60 * 1000;
 const DIAS_EVENTOS = 30;
 /** Eventos mínimos para que un producto cuente sin issues ni MRs abiertos. */
 const MIN_EVENTOS = 5;
+/**
+ * /events es la señal opcional: si tarda más, se sigue sin ella. Medido en
+ * frío hasta 5 s (tres páginas); 10 s deja margen y corre en paralelo con el
+ * catálogo, que ya tarda ~6,6 s.
+ */
+const TIMEOUT_EVENTOS_MS = 10_000;
+/** Sin eventos la detección es peor: se reintenta pronto en vez de fijarla una hora. */
+const TTL_DEGRADADO_MS = 5 * 60 * 1000;
+
+/** `valor` y si llegó a tiempo; si `promesa` falla o tarda, `porDefecto` y false. */
+function conTope<T>(promesa: Promise<T>, ms: number, porDefecto: T): Promise<{ valor: T; aTiempo: boolean }> {
+  return new Promise((ok) => {
+    const reloj = setTimeout(() => ok({ valor: porDefecto, aTiempo: false }), ms);
+    promesa.then(
+      (valor) => {
+        clearTimeout(reloj);
+        ok({ valor, aTiempo: true });
+      },
+      () => {
+        clearTimeout(reloj);
+        ok({ valor: porDefecto, aTiempo: false });
+      }
+    );
+  });
+}
 
 export interface Producto {
   slug: string;
@@ -122,7 +147,8 @@ function conNombre(slugs: string[], productos: Producto[]): Producto[] {
 /** Productos en los que trabaja `username`, o los de DASHBOARD_PRODUCTS si está definido. */
 export async function detectarProductos(
   client: GitLabClient,
-  username: string
+  username: string,
+  opciones: { timeoutEventosMs?: number; ttlDegradadoMs?: number } = {}
 ): Promise<Producto[]> {
   const manual = process.env.DASHBOARD_PRODUCTS?.split(",").map((s) => s.trim()).filter(Boolean);
   if (manual?.length) {
@@ -136,27 +162,38 @@ export async function detectarProductos(
   try {
     const desde = sumarDias(enZona().fecha, -DIAS_EVENTOS);
     // Cada señal falla por su cuenta: sin eventos, bastan issues y MRs abiertos.
-    const [cat, issues, mios, revision, eventos] = await Promise.all([
+    const [cat, issues, mios, revision, eventosTope] = await Promise.all([
       catalogo(client, username),
       client.getAll<any>("/issues", { scope: "assigned_to_me", state: "opened" }, 60).catch(() => []),
       client.getAll<any>("/merge_requests", { scope: "created_by_me", state: "opened" }, 40).catch(() => []),
+      // Sin scope, GitLab aplica created_by_me y esconde los MRs de otros.
       client
-        .getAll<any>("/merge_requests", { reviewer_username: username, state: "opened" }, 40)
+        .getAll<any>("/merge_requests", { reviewer_username: username, state: "opened", scope: "all" }, 40)
         .catch(() => []),
-      client.getAll<any>("/events", { after: desde }, 300).catch(() => [])
+      conTope(
+        client.getAll<any>("/events", { after: desde }, 300),
+        opciones.timeoutEventosMs ?? TIMEOUT_EVENTOS_MS,
+        [] as any[]
+      )
     ]);
 
     const mapa = new Map(cat.proyectos.map((p) => [p.id, p.producto]));
     const conteos = contarActividad(
       mapa,
       [...issues, ...mios, ...revision].map((x) => x.project_id),
-      eventos.map((e) => e.project_id)
+      eventosTope.valor.map((e) => e.project_id)
     );
     const productos = conNombre(elegirProductos(conteos), cat.productos);
-    detecciones.set(username, { hasta: Date.now() + TTL_DETECCION_MS, productos });
+    const ttl = eventosTope.aTiempo
+      ? TTL_DETECCION_MS
+      : (opciones.ttlDegradadoMs ?? TTL_DEGRADADO_MS);
+    detecciones.set(username, { hasta: Date.now() + ttl, productos });
     return productos;
-  } catch {
-    // Catálogo inaccesible: mejor la última detección, aunque esté vencida, que nada.
-    return guardada?.productos ?? [];
+  } catch (error) {
+    // Catálogo inaccesible: mejor la última detección, aunque esté vencida.
+    // Sin ella se propaga el error: una lista vacía se leería como "no
+    // trabajas en nada" y dejaría horas en cero y avisos falsos.
+    if (guardada) return guardada.productos;
+    throw error;
   }
 }

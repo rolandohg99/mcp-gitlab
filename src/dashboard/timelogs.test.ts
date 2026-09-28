@@ -56,3 +56,18 @@ test("horas: sin grupos no consulta y queda en cero", async () => {
   assert.equal(r.parcial, false);
   assert.equal(grupos.length, 0);
 });
+
+test("horas: el presupuesto incluye el tiempo de la detección", async () => {
+  process.env.DASHBOARD_PRODUCTS = "sigo";
+  delete process.env.TIMELOG_GROUP;
+  const { cliente, grupos } = clienteFalso({ siguiente: false });
+  (cliente as unknown as { getAll: () => Promise<unknown[]> }).getAll = () =>
+    new Promise((ok) => setTimeout(() => ok([]), 150));
+  try {
+    const r = await buildTimelogReport(cliente, "yo", { dias: 3, presupuestoMs: 100 });
+    assert.equal(r.parcial, true);
+    assert.equal(grupos.length, 0);
+  } finally {
+    delete process.env.DASHBOARD_PRODUCTS;
+  }
+});

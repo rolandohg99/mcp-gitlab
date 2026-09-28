@@ -95,7 +95,15 @@ export class DashboardApi {
 
   async summary(username: string) {
     const raiz = raizProductos();
-    const productos = await detectarProductos(this.client, username);
+    // Fallos que no tumban una sección entera: la detección, o un producto
+    // concreto en bugs o milestones. El resto del resumen sigue.
+    const parciales: string[] = [];
+    let productos: Producto[] = [];
+    try {
+      productos = await detectarProductos(this.client, username);
+    } catch (error) {
+      parciales.push(`productos: ${(error as Error).message}`);
+    }
 
     const [assigned, mrsAuthored, mrsToReview, todos, bugs, milestones] = await Promise.all([
       settle("issues asignados", async () =>
@@ -105,7 +113,7 @@ export class DashboardApi {
         (await this.client.getAll<any>("/merge_requests", { scope: "created_by_me", state: "opened", order_by: "updated_at" }, 30)).map(toMr)
       ),
       settle("MRs por revisar", async () =>
-        (await this.client.getAll<any>("/merge_requests", { reviewer_username: username, state: "opened", order_by: "updated_at" }, 30)).map(toMr)
+        (await this.client.getAll<any>("/merge_requests", { reviewer_username: username, state: "opened", scope: "all", order_by: "updated_at" }, 30)).map(toMr)
       ),
       settle("todos", async () => {
         const { data } = await this.client.get<any[]>("/todos", { state: "pending", per_page: 30 });
@@ -122,22 +130,30 @@ export class DashboardApi {
       settle("bugs por estado", async () => {
         // Las labels `Bug :: …` viven en la raíz: sirven para todos los productos.
         // Se cuenta a nivel de grupo, así entran los bugs de cualquier repo del producto.
-        const pares = productos.flatMap((p) => BUG_STATES.map((state) => ({ p, state })));
-        return mapLimit(pares, 6, async ({ p, state }) => {
+        // Cada producto falla por su cuenta: uno inaccesible no borra los demás.
+        const porProducto = await mapLimit(productos, 3, async (p) => {
           const grupo = `${raiz}/${p.slug}`;
-          const { headers } = await this.client.get(`/groups/${encodeProject(grupo)}/issues`, {
-            labels: state,
-            state: "opened",
-            per_page: 1
-          });
-          return {
-            producto: p.slug,
-            productoNombre: p.nombre,
-            estado: state.replace("Bug :: ", ""),
-            total: Number(headers.get("x-total") ?? 0),
-            url: `${this.config.gitlabUrl}/groups/${grupo}/-/issues?label_name[]=${encodeURIComponent(state)}&state=opened`
-          };
+          try {
+            return await mapLimit(BUG_STATES, 2, async (state) => {
+              const { headers } = await this.client.get(`/groups/${encodeProject(grupo)}/issues`, {
+                labels: state,
+                state: "opened",
+                per_page: 1
+              });
+              return {
+                producto: p.slug,
+                productoNombre: p.nombre,
+                estado: state.replace("Bug :: ", ""),
+                total: Number(headers.get("x-total") ?? 0),
+                url: `${this.config.gitlabUrl}/groups/${grupo}/-/issues?label_name[]=${encodeURIComponent(state)}&state=opened`
+              };
+            });
+          } catch (error) {
+            parciales.push(`bugs de ${p.slug}: ${(error as Error).message}`);
+            return [];
+          }
         });
+        return porProducto.flat();
       }),
       settle("milestones", async () => {
         const porProducto = await mapLimit(productos, 6, async (p) => {
@@ -147,8 +163,10 @@ export class DashboardApi {
             return list.map((m) => ({ id: m.id, titulo: m.title, vence: m.due_date, producto: p.slug }));
           } catch (error) {
             // Producto sin repo `collaboration` (clocator, comunes): no tiene milestones.
-            if (error instanceof GitLabError && error.status === 404) return [];
-            throw error;
+            if (!(error instanceof GitLabError && error.status === 404)) {
+              parciales.push(`milestones de ${p.slug}: ${(error as Error).message}`);
+            }
+            return [];
           }
         });
         return porProducto.flat();
@@ -157,7 +175,8 @@ export class DashboardApi {
 
     const errors = [assigned, mrsAuthored, mrsToReview, todos, bugs, milestones]
       .map((r) => r.error)
-      .filter((e): e is string => Boolean(e));
+      .filter((e): e is string => Boolean(e))
+      .concat(parciales);
 
     return {
       productos: productos satisfies Producto[],
