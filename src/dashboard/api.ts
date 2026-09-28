@@ -162,8 +162,8 @@ export class DashboardApi {
    * en la misma funcion que alimenta las notificaciones: si el panel y los
    * avisos divergieran, uno de los dos estaria mintiendo.
    */
-  async pipelines(projects?: string[]) {
-    return pipelinesVigilados(this.client, projects);
+  async pipelines(username: string) {
+    return pipelinesVigilados(this.client, username);
   }
 
 }

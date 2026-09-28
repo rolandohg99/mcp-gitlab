@@ -1,5 +1,6 @@
 import { encodeProject, GitLabError, type GitLabClient } from "../gitlab/client.js";
 import { consultarHorasDeHoy } from "./horas.js";
+import { detectarProductos } from "./productos.js";
 import { mapLimit, proyectosVigilados, separarRuta } from "./proyectos.js";
 
 /**
@@ -23,7 +24,11 @@ export interface Snapshot {
   }>;
   pipelines: Array<{
     project: string;
-    /** Subgrupo dentro de SIGO: "microservices", "servicios-soa/tareas"… */
+    /** Slug del producto: "sigo", "clocator2"… */
+    producto: string;
+    /** Nombre del producto tal como lo muestra GitLab. */
+    productoNombre: string;
+    /** Carpeta dentro del producto: "microservices", "servicios-soa/tareas"… */
     grupo: string;
     /** Nombre del repo sin la ruta. */
     nombre: string;
@@ -52,7 +57,7 @@ export async function construirSnapshot(
       .getAll<any>("/merge_requests", { reviewer_username: username, state: "opened" }, 40)
       .catch(() => []),
     client.getAll<any>("/merge_requests", { scope: "created_by_me", state: "opened" }, 40).catch(() => []),
-    pipelinesVigilados(client)
+    pipelinesVigilados(client, username)
   ]);
 
   const mrsMios = [];
@@ -123,17 +128,25 @@ function entornoDe(nombreJob: string): string {
   return (m?.[1] ?? nombreJob).trim();
 }
 
-export async function pipelinesVigilados(client: GitLabClient, lista?: string[]) {
-  const proyectos = lista
-    ? lista.map((path) => ({ id: 0, path, ultimaActividad: "" }))
-    : await proyectosVigilados(client);
+/** Último pipeline de cada repo de los productos en los que trabaja `username`. */
+export async function pipelinesVigilados(client: GitLabClient, username: string) {
+  const productos = await detectarProductos(client, username);
+  const nombres = new Map(productos.map((p) => [p.slug, p.nombre]));
+  const proyectos = await proyectosVigilados(
+    client,
+    username,
+    productos.map((p) => p.slug)
+  );
 
   // Concurrencia 6: 20 proyectos tardan ~300 ms sin castigar la instancia.
   const filas = await mapLimit(proyectos, 6, async ({ id, path }) => {
     const ref = id || encodeProject(path);
-    const { grupo, nombre } = separarRuta(path);
+    const { producto, grupo, nombre } = separarRuta(path);
+    const productoNombre = nombres.get(producto) ?? producto;
     const vacio = {
       project: path,
+      producto,
+      productoNombre,
       grupo,
       nombre,
       id: 0,
@@ -170,6 +183,8 @@ export async function pipelinesVigilados(client: GitLabClient, lista?: string[])
 
       return {
         project: path,
+        producto,
+        productoNombre,
         grupo,
         nombre,
         id: p.id,

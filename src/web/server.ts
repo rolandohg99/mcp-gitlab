@@ -150,7 +150,7 @@ async function manejarApi(
     case "/api/summary":
       return json(res, 200, await api.summary(sesion.usuario.username));
     case "/api/pipelines":
-      return json(res, 200, await api.pipelines());
+      return json(res, 200, await api.pipelines(sesion.usuario.username));
     case "/api/timelogs": {
       const dias = Number(url.searchParams.get("dias") ?? 14);
       return json(

@@ -81,7 +81,7 @@ export async function startServer(
         json(res, 200, await api.summary(me.username));
         return;
       case "/api/pipelines":
-        json(res, 200, await api.pipelines());
+        json(res, 200, await api.pipelines(me.username));
         return;
       case "/api/timelogs": {
         const dias = Number(url.searchParams.get("dias") ?? 14);
