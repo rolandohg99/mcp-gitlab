@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { GitLabError, type GitLabClient } from "../gitlab/client.js";
 import { crearPanel, type Almacen } from "./navegador.js";
 
-const VPN = "No se alcanza GitLab. ¿Estás conectado a la VPN?";
+const VPN = "No se alcanza GitLab. ¿Estás conectado a la VPN? Si el navegador pregunta si este sitio puede acceder a tu red local, permítelo.";
 
 function almacen(opciones: { fallaEscritura?: boolean } = {}): Almacen & { datos: Map<string, string> } {
   const datos = new Map<string, string>();

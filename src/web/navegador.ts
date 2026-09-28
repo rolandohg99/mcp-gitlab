@@ -36,7 +36,13 @@ const CLAVE_TOKEN = "panel-comsatel:token";
 /** Historial de avisos de la web; se borra al cerrar sesión. */
 const CLAVES_AVISOS = ["panel-sigo:avisos", "panel-sigo:estado"];
 
-export const MENSAJE_VPN = "No se alcanza GitLab. ¿Estás conectado a la VPN?";
+/**
+ * Dentro de la VPN, GitLab resuelve a una IP privada (192.168.1.251): Chrome y
+ * Edge piden permiso para que una web pública acceda a la red local, y sin él
+ * bloquean la petición igual que si no hubiera VPN.
+ */
+export const MENSAJE_VPN =
+  "No se alcanza GitLab. ¿Estás conectado a la VPN? Si el navegador pregunta si este sitio puede acceder a tu red local, permítelo.";
 
 export function crearPanel(deps: {
   almacen: Almacen;

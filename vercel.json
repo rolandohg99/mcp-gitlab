@@ -1,25 +1,23 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "outputDirectory": "public",
-  "buildCommand": null,
   "installCommand": "npm install --ignore-scripts",
-  "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
+  "buildCommand": "npm run build:web",
+  "outputDirectory": "public",
   "rewrites": [
-    { "source": "/login", "destination": "/login.html" },
-    { "source": "/auth/logout", "destination": "/api/auth/logout" }
+    { "source": "/login", "destination": "/login.html" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://project.comsatel.com.pe; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
+        },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        { "key": "Referrer-Policy", "value": "no-referrer" }
       ]
     }
   ]

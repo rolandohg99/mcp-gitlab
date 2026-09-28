@@ -2,7 +2,6 @@
 dist/
 release*/
 build/
-scripts/
 src/desktop/
 src/tools/
 src/index.ts
