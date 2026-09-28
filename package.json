@@ -96,5 +96,8 @@
   },
   "overrides": {
     "@noble/hashes": "^1.8.0"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

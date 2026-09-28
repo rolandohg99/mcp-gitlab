@@ -6,7 +6,6 @@
   "installCommand": "npm install --ignore-scripts",
   "functions": {
     "api/**/*.ts": {
-      "runtime": "@vercel/node@5.1.10",
       "maxDuration": 30
     }
   },
