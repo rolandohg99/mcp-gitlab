@@ -1,8 +1,13 @@
 import type { GitLabClient } from "../gitlab/client.js";
+import { detectarProductos, raizProductos } from "./productos.js";
 import { diaDeSemana, enZona, sumarDias } from "./zona.js";
 
-/** Grupo sobre el que se consultan los registros de tiempo. */
-const DEFAULT_GROUP = "comsatel/development/products/sigo";
+/**
+ * Tiempo total para leer registros. GraphQL no filtra por usuario en 14.2, así
+ * que se baja todo lo del grupo: sin tope, 90 días de un producto grande pasan
+ * de los 30 s de Vercel. Mejor un total marcado como parcial que un timeout.
+ */
+const PRESUPUESTO_MS = 20_000;
 
 const QUERY = `
 query($path: ID!, $from: Time!, $to: Time!, $after: String) {
@@ -69,14 +74,15 @@ async function fetchAll(
   client: GitLabClient,
   group: string,
   from: Date,
-  to: Date
-): Promise<RawTimelog[]> {
+  to: Date,
+  plazo: number
+): Promise<{ nodes: RawTimelog[]; completo: boolean }> {
   const nodes: RawTimelog[] = [];
   let after: string | null = null;
 
-  // Tope de paginas: el grupo entero puede tener miles de registros y solo
-  // necesitamos la ventana reciente.
-  for (let page = 0; page < 15; page++) {
+  // El plazo es el único límite: un tope de páginas cortaba en silencio.
+  while (true) {
+    if (Date.now() >= plazo) return { nodes, completo: false };
     const data: any = await client.graphql(QUERY, {
       path: group,
       from: from.toISOString(),
@@ -84,18 +90,18 @@ async function fetchAll(
       after
     });
     const conn = data?.group?.timelogs;
-    if (!conn) break;
+    if (!conn) return { nodes, completo: true };
     nodes.push(...(conn.nodes ?? []));
-    if (!conn.pageInfo?.hasNextPage) break;
+    if (!conn.pageInfo?.hasNextPage) return { nodes, completo: true };
     after = conn.pageInfo.endCursor;
   }
-
-  return nodes;
 }
 
 export interface TimelogReport {
   usuario: string;
-  grupo: string;
+  grupos: string[];
+  /** true si el presupuesto de tiempo se agotó antes de leerlo todo. */
+  parcial: boolean;
   desde: string;
   hasta: string;
   dias: DayTotal[];
@@ -122,10 +128,15 @@ function ventanaValida(dias: number | undefined): number {
 export async function buildTimelogReport(
   client: GitLabClient,
   username: string,
-  opciones: { dias?: number; group?: string } = {}
+  opciones: { dias?: number; grupos?: string[]; presupuestoMs?: number } = {}
 ): Promise<TimelogReport> {
   const diasVentana = ventanaValida(opciones.dias);
-  const group = opciones.group ?? process.env.TIMELOG_GROUP?.trim() ?? DEFAULT_GROUP;
+  const fijo = process.env.TIMELOG_GROUP?.trim();
+  const grupos =
+    opciones.grupos ??
+    (fijo
+      ? [fijo]
+      : (await detectarProductos(client, username)).map((p) => `${raizProductos()}/${p.slug}`));
 
   // La ventana se cuenta en dias de Lima. La consulta arranca a medianoche UTC
   // del primer dia: cubre tanto los registros con fecha (00:00Z) como los de
@@ -135,7 +146,18 @@ export async function buildTimelogReport(
   const hasta = new Date();
   const desde = new Date(`${primerDia}T00:00:00Z`);
 
-  const todos = await fetchAll(client, group, desde, hasta);
+  // Grupos en secuencia con un plazo común: son disjuntos, no hay duplicados.
+  const plazo = Date.now() + (opciones.presupuestoMs ?? PRESUPUESTO_MS);
+  const todos: RawTimelog[] = [];
+  let parcial = false;
+  for (const grupo of grupos) {
+    const { nodes, completo } = await fetchAll(client, grupo, desde, hasta, plazo);
+    todos.push(...nodes);
+    if (!completo) {
+      parcial = true;
+      break;
+    }
+  }
   const mios = todos.filter((t) => t.user?.username === username);
 
   const porDia = new Map<string, TimelogEntry[]>();
@@ -174,7 +196,8 @@ export async function buildTimelogReport(
 
   return {
     usuario: username,
-    grupo: group,
+    grupos,
+    parcial,
     desde: dias[0]?.fecha ?? hoy,
     hasta: hoy,
     dias,

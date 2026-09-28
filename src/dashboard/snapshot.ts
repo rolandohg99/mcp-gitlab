@@ -87,7 +87,7 @@ export async function construirSnapshot(
       const r = await consultarHorasDeHoy(client, username);
       horas = {
         ...r,
-        url: `${gitlabUrl}/comsatel/development/products/sigo/collaboration/-/issues?assignee_username=${username}&state=opened`
+        url: `${gitlabUrl}/dashboard/issues?assignee_username=${encodeURIComponent(username)}&state=opened`
       };
     } catch {
       // GraphQL caido: se reintenta en la siguiente vuelta.
