@@ -44,6 +44,9 @@ export async function validarToken(
       return { ok: false, error: "El token no tiene permiso de lectura. Créalo con el scope read_api." };
     }
     if (error instanceof GitLabError && error.status === 0) {
+      // Al registro del servidor, para diagnosticar (DNS, red, certificado); nunca el token.
+      const causa = (error.details as { cause?: { code?: string; message?: string } } | undefined)?.cause;
+      console.error(`[login] GitLab inalcanzable: ${error.message}${causa ? ` (${causa.code ?? ""} ${causa.message ?? ""})` : ""}`);
       return { ok: false, error: "No se pudo conectar con GitLab. Inténtalo de nuevo en un momento." };
     }
     return { ok: false, error: `GitLab no aceptó el token: ${(error as Error).message}` };

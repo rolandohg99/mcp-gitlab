@@ -1,9 +1,14 @@
 # Desplegar el panel en Vercel
 
-El panel web corre en Vercel como funciones serverless. GitLab **sí** es
-accesible desde internet (verificado: una petición desde fuera de la red de
-Comsatel devuelve `401`, no un timeout), así que las funciones pueden
-consultarlo.
+El panel web corre en Vercel como funciones serverless, que necesitan llegar
+a GitLab desde internet.
+
+> **Estado al 2026-09-28: bloqueado.** Desde Vercel, `project.comsatel.com.pe`
+> responde con una página del gateway de Comsatel — `503` y "La página no se
+> encuentra disponible para acceso desde la red externa" —, no con la API de
+> GitLab. El login falla con "No se pudo conectar con GitLab" (en el registro
+> de la función: `HPE_INVALID_HEADER_TOKEN`). Mientras la red de Comsatel no
+> permita ese acceso, la versión web debe alojarse dentro de la red.
 
 ## 1. Cómo entra cada persona
 
