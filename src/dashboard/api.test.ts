@@ -45,7 +45,7 @@ test("summary: un producto roto no borra los bugs de los demás", async () => {
   const s = await api(clienteFalso({ productoRoto: "clocatr2" })).summary("ana");
 
   const sigo = s.bugs.filter((b) => b.producto === "sigo");
-  assert.equal(sigo.length, 6);
+  assert.equal(sigo.length, 9);
   assert.ok(sigo.every((b) => b.total === 3));
   assert.ok(s.errors.some((e) => e.includes("clocatr2")), JSON.stringify(s.errors));
 });
@@ -54,4 +54,23 @@ test("summary: si falla la detección, lo dice en errors y sigue", async () => {
   const s = await api(clienteFalso({ catalogoRoto: true })).summary("ana");
   assert.deepEqual(s.productos, []);
   assert.ok(s.errors.some((e) => e.startsWith("productos")), JSON.stringify(s.errors));
+});
+
+test("summary: cuenta los 9 estados del flujo de bugs y solo issues abiertos", async () => {
+  process.env.DASHBOARD_PRODUCTS = "sigo";
+  const consultas: Array<Record<string, unknown>> = [];
+  const cliente = clienteFalso({});
+  const espia = cliente as unknown as { get: (r: string, q?: Record<string, unknown>) => Promise<unknown> };
+  const original = espia.get;
+  espia.get = (ruta, q) => {
+    if (decodeURIComponent(ruta).endsWith("/issues") && q?.labels) consultas.push(q);
+    return original(ruta, q);
+  };
+
+  const s = await api(cliente).summary("ana");
+  assert.deepEqual(
+    s.bugs.map((b) => b.estado),
+    ["New", "To Analysis", "In Analysis", "To Develop", "In Development", "To Test", "In Test", "Done", "Deployed"]
+  );
+  assert.ok(consultas.length === 9 && consultas.every((q) => q.state === "opened"));
 });

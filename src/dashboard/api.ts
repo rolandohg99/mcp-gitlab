@@ -4,11 +4,19 @@ import { detectarProductos, raizProductos, type Producto } from "./productos.js"
 import { mapLimit } from "./proyectos.js";
 import { pipelinesVigilados } from "./snapshot.js";
 
-/** Estados de workflow que el equipo usa como labels con scope. */
+/**
+ * Flujo completo de un bug, en orden, como labels con scope (una por issue).
+ * Se cuentan solo issues abiertos: un bug cerrado ya terminó, lleve la label
+ * que lleve. Faltaban los tres "To …": en SIGO había 50 abiertos en To Analysis
+ * que no aparecían en ningún sitio.
+ */
 const BUG_STATES = [
   "Bug :: New",
+  "Bug :: To Analysis",
   "Bug :: In Analysis",
+  "Bug :: To Develop",
   "Bug :: In Development",
+  "Bug :: To Test",
   "Bug :: In Test",
   "Bug :: Done",
   "Bug :: Deployed"

@@ -971,7 +971,7 @@ function pintarTodos(el, todos, contador) {
 }
 
 /** Estados de bug que todavía piden trabajo; Done y Deployed ya no. */
-const ESTADOS_ACTIVOS = ["New", "In Analysis", "In Development", "In Test"];
+const ESTADOS_ACTIVOS = ["New", "To Analysis", "In Analysis", "To Develop", "In Development", "To Test", "In Test"];
 
 function pintarKpis(s) {
   const bugsTotales = s.bugs.reduce((a, b) => a + b.total, 0);
