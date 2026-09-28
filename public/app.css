@@ -1,5 +1,5 @@
 /* =============================================================================
-   Panel de desarrollo Comsatel — sistema de diseño "La torre de control"
+   Panel de desarrollo Comsatel — sistema de diseño azul marino
    Hoja única compartida por el panel, el login OAuth y la pantalla de token.
 
    Tres ideas mandan sobre todo lo demás:
@@ -13,46 +13,49 @@
    ============================================================================= */
 
 :root {
-  /* --- superficies: cuatro tonos, de más hundido a más elevado ------------ */
-  --bg: #09090b;
-  --surface: #111114;
-  --surface-2: #18181c;
-  --surface-3: #1f1f24;
+  /* --- superficies: azul marino, de más hundido a más elevado ----------- */
+  --bg: #0b1220;
+  --sidebar: #0d1526;
+  --surface: #111b2e;
+  --surface-2: #16223a;
+  --surface-3: #1c2a46;
 
   /* --- texto --------------------------------------------------------------- */
-  --text: #ededef;        /* 17.0:1 sobre bg                                  */
-  --text-muted: #9095a0;  /*  6.3:1 surface · 5.9:1 surface-2 · 5.5:1 surface-3 */
+  --text: #e6edf7;
+  --text-muted: #94a3b8;
 
-  /* --- bordes -------------------------------------------------------------- */
-  --border: rgba(255, 255, 255, 0.07);         /* separadores                */
-  --border-strong: rgba(255, 255, 255, 0.12);  /* contorno de botones        */
-  --border-hover: rgba(255, 255, 255, 0.22);
-  --border-control: #6b7080;  /* límite de campos: 3.8:1 surface, 3.6:1 surface-2 */
+  /* --- bordes: azulados, nunca grises -------------------------------------- */
+  --border: rgba(148, 163, 184, 0.12);
+  --border-strong: rgba(148, 163, 184, 0.22);
+  --border-hover: rgba(148, 163, 184, 0.36);
+  --border-control: #5b6b86;
 
   /* --- acento: partido en texto y relleno ---------------------------------- */
-  --primary: #8b95f0;        /* texto, iconos, foco: 6.5:1 surface-2          */
-  --primary-solid: #5663cc;  /* relleno; blanco encima 5.2:1                  */
-  --primary-hover: #4f5bc4;  /* blanco encima 5.8:1                           */
-  --primary-soft: rgba(94, 106, 210, 0.14);
+  --primary: #60a5fa;
+  --primary-solid: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: rgba(59, 130, 246, 0.16);
 
   /* --- estados: solo significan algo, nunca decoran ----------------------- */
-  --success: #3fd68c;
-  --warning: #f5b544;
-  --danger: #ff6b6b;
-  --danger-solid: #c93434;   /* blanco encima 5.2:1                           */
-  --info: #4fc3f7;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --danger-solid: #dc2626;
+  --info: #38bdf8;
+  --accent-violeta: #a78bfa;
 
-  --success-soft: rgba(63, 214, 140, 0.12);
-  --warning-soft: rgba(245, 181, 68, 0.12);
-  --danger-soft: rgba(255, 107, 107, 0.12);
+  --success-soft: rgba(52, 211, 153, 0.14);
+  --warning-soft: rgba(251, 191, 36, 0.14);
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --violeta-soft: rgba(167, 139, 250, 0.16);
 
   --success-line: color-mix(in srgb, var(--success) 40%, transparent);
   --warning-line: color-mix(in srgb, var(--warning) 40%, transparent);
   --danger-line: color-mix(in srgb, var(--danger) 45%, transparent);
-  --primary-line: color-mix(in srgb, var(--primary) 40%, transparent);
+  --primary-line: color-mix(in srgb, var(--primary) 45%, transparent);
 
-  /* Marca en reposo: barras completas, puntos de estado sano. 4.2:1 surface-2 */
-  --neutral-mark: #767b88;
+  /* Marca en reposo: barras completas, puntos de estado sano. */
+  --neutral-mark: #6b7a94;
 
   /* --- tipografía: la del sistema, con cifras tabulares ------------------- */
   --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
@@ -79,8 +82,8 @@
 
   /* --- forma: radios contenidos, precisos ---------------------------------- */
   --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius: 8px;
+  --radius-sm: 8px;
+  --radius: 12px;
   --radius-full: 999px;
 
   /* --- elevación: una sola sombra, para lo que flota ----------------------- */
@@ -98,7 +101,7 @@
 
   color-scheme: dark;
   accent-color: var(--primary);
-  scrollbar-color: #3a3c44 transparent;
+  scrollbar-color: #2a3a58 transparent;
 }
 
 @media (pointer: coarse) {
@@ -135,9 +138,20 @@ body {
 }
 
 ::selection {
-  background: rgba(139, 149, 240, 0.32);
+  background: rgba(96, 165, 250, 0.32);
   color: var(--text);
 }
+
+/* Barras de desplazamiento del mismo azul que el resto (WebKit/Chromium). */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #2a3a58;
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #3a4d70; background-clip: padding-box; }
 
 h1,
 h2,

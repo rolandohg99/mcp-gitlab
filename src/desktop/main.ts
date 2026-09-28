@@ -98,7 +98,7 @@ function crearVentana(url: string): void {
     minWidth: 900,
     title: "Panel de desarrollo Comsatel",
     icon: ICONO,
-    backgroundColor: "#14161a",
+    backgroundColor: "#0b1220", // --bg de app.css: sin destello al cargar
     autoHideMenuBar: true,
     webPreferences: { nodeIntegration: false, contextIsolation: true }
   });
