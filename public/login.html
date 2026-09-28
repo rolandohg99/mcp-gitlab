@@ -60,6 +60,39 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+/* ---- modo de la página ----
+   "servidor": escritorio o npm run web, las rutas /api/* existen.
+   "navegador": hosting estático (Vercel). /api/me da 404 y el propio navegador,
+   que está en la VPN, consulta GitLab con panel.js. Solo un 404 cambia de modo:
+   un error de red sigue siendo "servidor caído". */
+let modoPagina = null;
+
+function cargarScript(src) {
+  return new Promise((ok, mal) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = ok;
+    s.onerror = () => mal(new Error(`No se pudo cargar ${src}.`));
+    document.head.appendChild(s);
+  });
+}
+
+async function detectarModo() {
+  if (modoPagina) return modoPagina;
+  try {
+    const r = await fetch("/api/me");
+    if (r.status === 404) {
+      await cargarScript("/panel.js");
+      modoPagina = "navegador";
+    } else {
+      modoPagina = "servidor";
+    }
+  } catch {
+    modoPagina = "servidor";
+  }
+  return modoPagina;
+}
+
 const campo = $("token");
 const msg = $("msg");
 
@@ -89,6 +122,14 @@ $("formulario").addEventListener("submit", async (e) => {
 
   ocupado(true);
   msg.hidden = true;
+  if (await detectarModo() === "navegador") {
+    // El navegador valida contra GitLab por la VPN y guarda el token en la pestaña.
+    const r = await window.PanelNavegador.iniciarSesion(token);
+    if (!r.ok) { aviso(r.error, "danger"); ocupado(false); campo.focus(); return; }
+    aviso(`Conectado como @${r.usuario.username}. Abriendo el panel…`, "success");
+    location.href = "/";
+    return;
+  }
   try {
     const r = await fetch("/api/auth/token", {
       method: "POST",
@@ -110,6 +151,10 @@ $("formulario").addEventListener("submit", async (e) => {
   }
 });
 
+// Con sesión ya abierta en esta pestaña (modo navegador), directo al panel.
+detectarModo().then((modo) => {
+  if (modo === "navegador" && window.PanelNavegador.tieneToken()) location.href = "/";
+});
 campo.focus();
 </script>
 </body>

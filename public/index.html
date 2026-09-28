@@ -1114,13 +1114,23 @@ async function avisosWeb() {
   const estadoPrevio = leerLocal(CLAVE_ESTADO, null);
   let guardados = leerLocal(CLAVE_AVISOS, []);
 
-  const r = await fetch("/api/notificaciones", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ estado: estadoPrevio })
-  });
-  if (r.status === 401) { location.href = "/login"; throw new Error("sesión expirada"); }
-  const { avisos, estado } = await r.json();
+  let avisos, estado;
+  if (await detectarModo() === "navegador") {
+    try {
+      ({ avisos, estado } = await window.PanelNavegador.notificaciones(estadoPrevio));
+    } catch (error) {
+      if (error && error.tipo === "sesion") location.href = "/login";
+      throw error;
+    }
+  } else {
+    const r = await fetch("/api/notificaciones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado: estadoPrevio })
+    });
+    if (r.status === 401) { location.href = "/login"; throw new Error("sesión expirada"); }
+    ({ avisos, estado } = await r.json());
+  }
 
   guardarLocal(CLAVE_ESTADO, estado);
   if (avisos.length) {
@@ -1279,7 +1289,59 @@ function pintarHoras(r) {
  * Si el servidor local ya no está (se cerró la sesión, se detuvo la app), un
  * fetch lanza TypeError: se traduce a algo que el usuario pueda entender.
  */
+/* ---- modo de la página ----
+   "servidor": escritorio o npm run web, las rutas /api/* existen.
+   "navegador": hosting estático (Vercel). /api/me da 404 y el propio navegador,
+   que está en la VPN, consulta GitLab con panel.js. Solo un 404 cambia de modo:
+   un error de red sigue siendo "servidor caído". */
+let modoPagina = null;
+
+function cargarScript(src) {
+  return new Promise((ok, mal) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = ok;
+    s.onerror = () => mal(new Error(`No se pudo cargar ${src}.`));
+    document.head.appendChild(s);
+  });
+}
+
+async function detectarModo() {
+  if (modoPagina) return modoPagina;
+  try {
+    const r = await fetch("/api/me");
+    if (r.status === 404) {
+      await cargarScript("/panel.js");
+      modoPagina = "navegador";
+    } else {
+      modoPagina = "servidor";
+    }
+  } catch {
+    modoPagina = "servidor";
+  }
+  return modoPagina;
+}
+
+/** Las mismas rutas, resueltas en el navegador. Sesión vencida → login. */
+async function pedirNavegador(ruta) {
+  const panel = window.PanelNavegador;
+  const u = new URL(ruta, location.origin);
+  try {
+    switch (u.pathname) {
+      case "/api/me": return await panel.me();
+      case "/api/summary": return await panel.summary();
+      case "/api/pipelines": return await panel.pipelines();
+      case "/api/timelogs": return await panel.timelogs(Number(u.searchParams.get("dias") ?? 14));
+    }
+    throw new Error(`Ruta no disponible en el navegador: ${u.pathname}`);
+  } catch (error) {
+    if (error && error.tipo === "sesion") location.href = "/login";
+    throw error;
+  }
+}
+
 async function pedir(ruta) {
+  if (await detectarModo() === "navegador") return pedirNavegador(ruta);
   let r;
   try {
     r = await fetch(ruta);
@@ -1453,7 +1515,13 @@ let servidorCaido = false;
 $("salir").addEventListener("click", async () => {
   if (modoSesion === "web") {
     try { localStorage.removeItem(CLAVE_AVISOS); localStorage.removeItem(CLAVE_ESTADO); } catch {}
-    location.href = "/auth/logout";
+    if (modoPagina === "navegador") {
+      // Sin servidor: el token solo vive en esta pestaña; se borra aquí.
+      window.PanelNavegador.cerrarSesion();
+      location.href = "/login";
+    } else {
+      location.href = "/auth/logout";
+    }
     return;
   }
 
