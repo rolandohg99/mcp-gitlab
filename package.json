@@ -21,7 +21,8 @@
     "dist:mac": "npm run build && electron-builder --mac",
     "vercel-build": "echo \"sin build: las funciones se compilan solas\"",
     "check:api": "tsc -p tsconfig.api.json",
-    "test": "npm run build && node --test \"dist/**/*.test.js\" \"scripts/*.test.mjs\""
+    "test": "npm run build && npm run build:web && node --test \"dist/**/*.test.js\" \"scripts/*.test.mjs\"",
+    "build:web": "node scripts/build-web.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
@@ -33,6 +34,7 @@
     "@types/ssh2": "^1.15.6",
     "electron": "^41.7.1",
     "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
     "typescript": "^7.0.2"
   },
   "main": "dist/desktop/main.js",

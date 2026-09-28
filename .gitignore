@@ -15,3 +15,6 @@ release*/
 
 # ruido
 *.log
+
+# paquete del navegador: lo genera npm run build:web
+public/panel.js
