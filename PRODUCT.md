@@ -8,7 +8,8 @@ web
 
 ## Users
 
-Desarrolladores de Comsatel que trabajan en el producto SIGO sobre el GitLab
+Desarrolladores de Comsatel que trabajan en cualquiera de los productos de
+`comsatel/development/products` (SIGO, Clocator, Smart Suite…) sobre el GitLab
 self-managed de la empresa (project.comsatel.com.pe). Lo abren varias veces al
 día, en su puesto, para saber qué atender: issues asignados, merge requests que
 esperan su revisión, pipelines rotos y horas pendientes de registrar.
@@ -22,8 +23,9 @@ registro de horas está al día.
 
 ## Positioning
 
-Está hecho a la medida de SIGO: descubre los repositorios del grupo
-`comsatel/development/products/sigo`, los agrupa por su carpeta real, sigue los
+Está hecho a la medida de los productos de Comsatel: detecta en cuáles trabaja
+cada persona por su actividad reciente (issues, merge requests y eventos),
+descubre sus repositorios, los agrupa por producto y carpeta real, sigue los
 despliegues por entorno (QA, dev, pre, prod) y mide las horas contra la jornada
 de 9 h de Comsatel.
 
@@ -37,7 +39,7 @@ de 9 h de Comsatel.
 - Notificaciones cada 5 minutos: issue nuevo, MR para revisar, aprobado o
   fusionado, pipeline roto, despliegues, To-Do, horas sin registrar y nueva
   versión de la app.
-- Actualizaciones anunciadas con un manifiesto en `sigo/collaboration`.
+- Actualizaciones anunciadas con un manifiesto en `products/collaboration`.
 
 ## Capabilities and Constraints
 
@@ -54,7 +56,7 @@ de 9 h de Comsatel.
 
 ## Brand Commitments
 
-- Nombre: "Panel de desarrollo SIGO".
+- Nombre: "Panel de desarrollo Comsatel".
 - Tema oscuro, confirmado por el usuario.
 - Sin logotipo corporativo definido. No se usa el logotipo de GitLab.
 

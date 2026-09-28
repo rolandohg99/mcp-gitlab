@@ -38,7 +38,7 @@
   "main": "dist/desktop/main.js",
   "build": {
     "appId": "com.comsatel.panel-gitlab",
-    "productName": "Panel GitLab SIGO",
+    "productName": "Panel de desarrollo Comsatel",
     "copyright": "© 2026 nrolando",
     "directories": {
       "output": "release",
@@ -55,7 +55,7 @@
         "nsis"
       ],
       "icon": "build/icon.png",
-      "artifactName": "PanelGitLabSIGO-${version}-setup.${ext}"
+      "artifactName": "PanelDesarrolloComsatel-${version}-setup.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -82,7 +82,7 @@
         }
       ],
       "icon": "build/icon.png",
-      "artifactName": "PanelGitLabSIGO-${version}-${arch}.${ext}",
+      "artifactName": "PanelDesarrolloComsatel-${version}-${arch}.${ext}",
       "darkModeSupport": true,
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -91,7 +91,7 @@
       }
     },
     "dmg": {
-      "title": "Panel GitLab SIGO"
+      "title": "Panel de desarrollo Comsatel"
     }
   },
   "overrides": {

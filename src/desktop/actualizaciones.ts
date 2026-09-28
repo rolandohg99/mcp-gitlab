@@ -5,7 +5,7 @@ export function origenActualizaciones(): { proyecto: string; ruta: string; ref: 
   return {
     proyecto:
       process.env.UPDATE_PROJECT?.trim() ||
-      "comsatel/development/products/sigo/collaboration",
+      "comsatel/development/products/collaboration",
     ruta: process.env.UPDATE_PATH?.trim() || "panel-desarrollo/version.json",
     ref: process.env.UPDATE_REF?.trim() || "main"
   };

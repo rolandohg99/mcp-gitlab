@@ -10,13 +10,13 @@ Por defecto:
 
 | Qué | Valor | Variable de entorno |
 |---|---|---|
-| Proyecto | `comsatel/development/products/sigo/collaboration` | `UPDATE_PROJECT` |
+| Proyecto | `comsatel/development/products/collaboration` | `UPDATE_PROJECT` |
 | Ruta | `panel-desarrollo/version.json` | `UPDATE_PATH` |
 | Rama | `main` | `UPDATE_REF` |
 
 ## Pasos para publicar
 
-1. Sube `PanelGitLabSIGO-<version>-setup.exe` a donde tu equipo comparta
+1. Sube `PanelDesarrolloComsatel-<version>-setup.exe` a donde tu equipo comparta
    binarios (una wiki de GitLab, una carpeta de red publicada por HTTP, un
    release del repo). Necesitas una **URL http/https** que abra la descarga.
 
@@ -28,7 +28,7 @@ Por defecto:
 ```json
 {
   "version": "0.2.0",
-  "url": "https://…/PanelGitLabSIGO-0.2.0-setup.exe",
+  "url": "https://…/PanelDesarrolloComsatel-0.2.0-setup.exe",
   "notas": "Qué cambió, en una línea.",
   "publicada": "2026-09-15"
 }

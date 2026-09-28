@@ -28,6 +28,10 @@ const GITLAB_URL = (process.env.GITLAB_URL ?? "https://project.comsatel.com.pe")
 // Sin esto Windows atribuye las notificaciones a "electron.exe" y a veces las descarta.
 app.setAppUserModelId("com.comsatel.panel-gitlab");
 
+// userData sale de `name` en package.json ("dev-gitlab-mcp"), no de
+// build.productName: renombrar el producto no mueve el token ni el estado.
+// No cambiar `name` sin migrar %APPDATA%/dev-gitlab-mcp.
+
 const ES_MAC = process.platform === "darwin";
 
 /**
@@ -92,7 +96,7 @@ function crearVentana(url: string): void {
     width: 1360,
     height: 900,
     minWidth: 900,
-    title: "Panel GitLab · SIGO",
+    title: "Panel de desarrollo Comsatel",
     icon: ICONO,
     backgroundColor: "#14161a",
     autoHideMenuBar: true,
@@ -200,7 +204,7 @@ function refrescarMenu(): void {
   const quien = servidor?.me.username ?? "sin conectar";
 
   bandeja.setToolTip(
-    `Panel GitLab · ${quien}\nÚltima revisión: ${ultimaRevision?.toLocaleTimeString("es-PE") ?? "aún no"}`
+    `Panel Comsatel · ${quien}\nÚltima revisión: ${ultimaRevision?.toLocaleTimeString("es-PE") ?? "aún no"}`
   );
 
   bandeja.setContextMenu(
@@ -230,7 +234,7 @@ function refrescarMenu(): void {
         click: () =>
           notificar({
             tipo: "todo",
-            titulo: "Panel GitLab funciona",
+            titulo: "Panel Comsatel funciona",
             cuerpo: "Si ves esto, las notificaciones están bien configuradas."
           })
       },
