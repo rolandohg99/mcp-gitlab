@@ -8,9 +8,9 @@ import { DashboardApi } from "../dashboard/api.js";
 import { comparar, estadoInicial, type Estado } from "../dashboard/comparador.js";
 import { construirSnapshot } from "../dashboard/snapshot.js";
 import { buildTimelogReport } from "../dashboard/timelogs.js";
-import { cargarOAuth, canjearCodigo, revocar, urlDeAutorizacion, usuarioDelToken } from "./oauth.js";
-import { escaparHtml } from "./html.js";
+import { GitLabClient } from "../gitlab/client.js";
 import { SessionStore, type Sesion } from "./sessions.js";
+import { origenPermitido, validarToken } from "./token-login.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PORT = Number(process.env.WEB_PORT ?? 5179);
@@ -22,10 +22,9 @@ function fatal(mensaje: string): never {
 }
 
 // Configuracion incompleta: mensaje accionable, no un stack trace.
-const { gitlabUrl, oauth } = (() => {
+const gitlabUrl = (() => {
   try {
-    const url = loadGitlabUrl();
-    return { gitlabUrl: url, oauth: cargarOAuth(url, PORT) };
+    return loadGitlabUrl();
   } catch (error) {
     return fatal((error as Error).message);
   }
@@ -59,9 +58,9 @@ function leerCookie(req: IncomingMessage, nombre: string): string | undefined {
 }
 
 function cookieDeSesion(id: string): string {
-  // Secure solo bajo https: en localhost el navegador descartaria la cookie.
-  const seguro = oauth.redirectUri.startsWith("https://") ? "; Secure" : "";
-  return `${COOKIE}=${id}; HttpOnly; Path=/; SameSite=Lax; Max-Age=28800${seguro}`;
+  // Sin Secure: este servidor escucha por http en local y el navegador la
+  // descartaria. En Vercel (https) la cookie si va marcada Secure.
+  return `${COOKIE}=${id}; HttpOnly; Path=/; SameSite=Lax; Max-Age=28800`;
 }
 
 function cookieBorrada(): string {
@@ -90,37 +89,29 @@ async function manejar(req: IncomingMessage, res: ServerResponse): Promise<void>
       if (sesion) return redirigir(res, "/");
       return servirArchivo(res, "login.html");
 
-    case "/auth/login": {
-      const estado = sesiones.crearEstado();
-      return redirigir(res, urlDeAutorizacion(oauth, estado));
-    }
-
-    case "/auth/callback": {
-      const error = url.searchParams.get("error");
-      if (error) {
-        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(`<p>GitLab rechazó el acceso: ${escaparHtml(error)}</p><p><a href="/login">Reintentar</a></p>`);
-        return;
+    case "/api/auth/token": {
+      // Login con token personal: se valida contra GitLab y queda en memoria.
+      if (req.method !== "POST") return json(res, 405, { error: "Usa POST con el token en el cuerpo." });
+      if (!origenPermitido(req.headers.origin, req.headers.host)) {
+        return json(res, 403, { error: "Solicitud no permitida: el login solo se acepta desde la propia página." });
       }
-
-      const codigo = url.searchParams.get("code");
-      const estado = url.searchParams.get("state");
-      if (!codigo || !estado || !sesiones.consumirEstado(estado)) {
-        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
-        res.end("<p>Solicitud de login inválida o expirada.</p><p><a href='/login'>Reintentar</a></p>");
-        return;
-      }
-
-      const token = await canjearCodigo(oauth, codigo);
-      const usuario = await usuarioDelToken(oauth, token.access_token);
-      const nueva = sesiones.abrir(usuario, token.access_token, gitlabUrl, token.refresh_token);
-      process.stdout.write(`[login] ${usuario.username} (sesiones activas: ${sesiones.activas})\n`);
-      return redirigir(res, "/", cookieDeSesion(nueva.id));
+      const cuerpo = (await leerCuerpo(req)) as { token?: string };
+      const r = await validarToken(String(cuerpo?.token ?? ""), (t) => new GitLabClient(gitlabUrl, t, "pat"));
+      if (!r.ok) return json(res, 400, { error: r.error });
+      const nueva = sesiones.abrir(r.usuario, r.token, gitlabUrl);
+      process.stdout.write(`[login] ${r.usuario.username} (sesiones activas: ${sesiones.activas})\n`);
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Set-Cookie": cookieDeSesion(nueva.id)
+      });
+      res.end(JSON.stringify({ ok: true, username: r.usuario.username }));
+      return;
     }
 
     case "/auth/logout": {
-      const cerrada = sesiones.cerrar(leerCookie(req, COOKIE));
-      if (cerrada) await revocar(oauth, cerrada.accessToken);
+      // El token personal no se revoca: es de la persona y lo gestiona en GitLab.
+      sesiones.cerrar(leerCookie(req, COOKIE));
       return redirigir(res, "/login", cookieBorrada());
     }
 
@@ -147,7 +138,7 @@ async function manejarApi(
 
   switch (url.pathname) {
     case "/api/me":
-      return json(res, 200, { ...sesion.usuario, modo: "oauth", puedeCerrarSesion: true });
+      return json(res, 200, { ...sesion.usuario, modo: "web", puedeCerrarSesion: true });
     case "/api/summary":
       return json(res, 200, await api.summary(sesion.usuario.username));
     case "/api/pipelines":
@@ -162,7 +153,7 @@ async function manejarApi(
     }
     case "/api/notificaciones": {
       // Mismo contrato que api/notificaciones.ts (Vercel): el front en modo
-      // oauth custodia estado e historial en localStorage y espera
+      // web custodia estado e historial en localStorage y espera
       // { avisos, estado }. El marcado de leidas tambien lo hace el navegador.
       if (req.method !== "POST") {
         return json(res, 405, { error: "Usa POST con el estado anterior en el cuerpo." });
@@ -202,8 +193,7 @@ servidor.listen(PORT, () => {
   process.stdout.write(
     `Panel multiusuario en http://localhost:${PORT}\n` +
       `Instancia: ${gitlabUrl}\n` +
-      `Redirect URI registrada: ${oauth.redirectUri}\n` +
-      `Scope solicitado: ${oauth.scope}\n`
+      `Login: token de acceso personal de cada usuario (scope read_api)\n`
   );
 });
 

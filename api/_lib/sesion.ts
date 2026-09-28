@@ -87,11 +87,3 @@ export function cookieBorrada(): string {
   return `${COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
 }
 
-/** Estado OAuth: cookie corta y separada, solo para el ida y vuelta del login. */
-export function cookieEstado(estado: string): string {
-  return `oauth_estado=${estado}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`;
-}
-
-export function cookieEstadoBorrada(): string {
-  return `oauth_estado=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
-}

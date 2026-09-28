@@ -14,6 +14,13 @@
       "env": { "DASHBOARD_PORT": "5188", "TIMELOG_GROUP": "" },
       "port": 5188,
       "url": "http://127.0.0.1:5188"
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["dist/web/server.js"],
+      "env": { "WEB_PORT": "5179", "TIMELOG_GROUP": "" },
+      "port": 5179
     }
   ]
 }

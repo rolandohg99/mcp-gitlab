@@ -43,8 +43,8 @@ export function exigirSesion(req: Req, res: Res): { sesion: Sesion; client: GitL
     res.status(401).json({ error: "sesión expirada", login: "/login" });
     return null;
   }
-  // Token OAuth: va como Bearer, nunca como PRIVATE-TOKEN.
-  return { sesion, client: new GitLabClient(gitlabUrl(), sesion.token, "bearer") };
+  // Token de acceso personal: va como PRIVATE-TOKEN.
+  return { sesion, client: new GitLabClient(gitlabUrl(), sesion.token, "pat") };
 }
 
 /** Envuelve un handler para que un fallo no devuelva la traza de Vercel. */

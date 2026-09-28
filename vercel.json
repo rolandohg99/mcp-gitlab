@@ -11,8 +11,7 @@
   },
   "rewrites": [
     { "source": "/login", "destination": "/login.html" },
-    { "source": "/auth/logout", "destination": "/api/auth/logout" },
-    { "source": "/auth/login", "destination": "/api/auth/login" }
+    { "source": "/auth/logout", "destination": "/api/auth/logout" }
   ],
   "headers": [
     {

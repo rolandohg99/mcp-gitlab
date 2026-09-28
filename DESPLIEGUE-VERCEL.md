@@ -5,30 +5,20 @@ accesible desde internet (verificado: una petición desde fuera de la red de
 Comsatel devuelve `401`, no un timeout), así que las funciones pueden
 consultarlo.
 
-## 1. Registrar la aplicación OAuth
+## 1. Cómo entra cada persona
 
-En GitLab: **Preferences → Applications**
-
-| Campo | Valor |
-|---|---|
-| Name | `Panel Comsatel` |
-| Redirect URI | `https://TU-DOMINIO.vercel.app/api/auth/callback` |
-| Confidential | marcado |
-| Scopes | `read_api` |
-
-La URI de redirección se compara carácter por carácter. Si aún no conoces el
-dominio, despliega primero, copia el que asigne Vercel y edita la aplicación.
+Con **su propio token de acceso personal** de GitLab, como en la app de
+escritorio: en la pantalla de login se explica cómo crearlo (Preferences →
+Access Tokens, scope `read_api`). No hay que registrar ninguna aplicación en
+GitLab. Una llave SSH no sirve: solo autentica git, no la API.
 
 ## 2. Variables de entorno en Vercel
 
-En **Settings → Environment Variables**:
+En **Settings → Environment Variables** (o `npx vercel env add NOMBRE production`):
 
 | Variable | Valor |
 |---|---|
 | `GITLAB_URL` | `https://project.comsatel.com.pe` |
-| `OAUTH_CLIENT_ID` | Application ID de GitLab |
-| `OAUTH_CLIENT_SECRET` | Secret de GitLab |
-| `OAUTH_SCOPE` | `read_api` |
 | `SESSION_SECRET` | 32+ caracteres aleatorios |
 
 Genera el secreto de sesión con:
@@ -86,8 +76,12 @@ a Vercel.**
 ## Cómo funciona la sesión
 
 No hay servidor con memoria: en serverless cada petición puede caer en una
-instancia distinta y efímera. El token de GitLab viaja **cifrado con AES-256-GCM
+instancia distinta y efímera. El token personal viaja **cifrado con AES-256-GCM
 dentro de la propia cookie**, que es `HttpOnly`, `Secure` y `SameSite=Lax`.
+
+- El login (`POST /api/auth/token`) valida el token contra GitLab y solo se
+  acepta desde la propia página (se comprueba `Origin`).
+- Cerrar sesión borra la cookie; **no revoca el token**, que es de la persona.
 
 - El navegador solo ve bytes opacos; sin `SESSION_SECRET` no puede leerlos.
 - GCM detecta cualquier manipulación: una cookie alterada se rechaza.

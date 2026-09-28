@@ -32,8 +32,9 @@ de 9 h de Comsatel.
 ## Operating Context
 
 - Tres formas de uso con la misma interfaz: app de escritorio (Electron, Windows;
-  macOS pendiente de compilar en un Mac), servidor local y web en Vercel con
-  inicio de sesión OAuth de GitLab.
+  macOS pendiente de compilar en un Mac), servidor local y web en Vercel.
+- En todas, cada persona entra con su propio token de acceso personal de GitLab
+  (scope `read_api`).
 - La app de escritorio entra con un token personal `read_api`, guardado cifrado
   en el equipo; la web usa una cookie de sesión cifrada.
 - Notificaciones cada 5 minutos: issue nuevo, MR para revisar, aprobado o

@@ -156,7 +156,7 @@ tono y un color que solo aparece cuando algo pide atención.
 Es una interfaz de trabajo (modo Operate): se prefiere lo familiar a lo
 sorprendente, la densidad a los espacios vacíos y la consistencia a la
 expresión. Una misma hoja, `public/app.css`, sirve a las tres pantallas (panel,
-login OAuth y conexión por token), y ningún recurso sale de fuera del proyecto.
+login web y conexión por token), y ningún recurso sale de fuera del proyecto.
 
 **Key Characteristics:**
 - Tema oscuro único (`color-scheme: dark`), en azul marino con bordes azulados.

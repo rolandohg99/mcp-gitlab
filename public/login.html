@@ -5,24 +5,112 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Entrar · Panel de desarrollo Comsatel</title>
 <link rel="stylesheet" href="/app.css">
+<style>
+  .pasos { color: var(--text-muted); padding-left: var(--space-5); margin: 0 0 var(--space-5); }
+  .pasos li { margin-bottom: var(--space-2); }
+  .pasos li::marker { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .pasos strong { color: var(--text); font-weight: 600; }
+  .campo-fila { display: flex; gap: var(--space-2); }
+  .campo-fila .field { flex: 1; min-width: 0; }
+  .campo-fila .btn { min-height: var(--tap); min-width: 88px; }
+  #entrar { margin-top: var(--space-3); }
+  .msg { margin-top: var(--space-4); }
+</style>
 </head>
 <body class="acceso">
-  <main class="caja">
+  <main class="caja caja-ancha">
     <svg class="marca" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
       <path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <h1>Panel de desarrollo Comsatel</h1>
-    <p class="sub">Tus issues, merge requests, pipelines y horas registradas, en un solo lugar.</p>
+    <p class="sub">Entra con tu token de acceso personal de GitLab.</p>
 
-    <a class="btn btn-primary btn-block" href="/auth/login">Iniciar sesión con GitLab</a>
+    <ol class="pasos">
+      <li>Abre <a href="https://project.comsatel.com.pe/-/profile/personal_access_tokens" target="_blank" rel="noopener">tus tokens de acceso</a> en GitLab.</li>
+      <li>Nombre: <strong>Panel Comsatel</strong>. Marca solo el scope <strong>read_api</strong>.</li>
+      <li>Créalo y copia el token: GitLab solo lo muestra una vez.</li>
+    </ol>
+
+    <form id="formulario" novalidate>
+      <label class="label" for="token">Token de acceso personal</label>
+      <div class="campo-fila">
+        <!-- autocomplete de contraseña: el navegador puede guardarlo y no hay que
+             volver a pegarlo cada día. -->
+        <input id="token" name="token" class="field field-lg field-mono" type="password" placeholder="glpat-…"
+               autocomplete="current-password" spellcheck="false" aria-describedby="msg" required>
+        <button id="ver" class="btn" type="button" aria-label="Mostrar el token">Ver</button>
+      </div>
+
+      <button id="entrar" class="btn btn-primary btn-block" type="submit">
+        <span id="entrar-txt">Entrar</span>
+      </button>
+    </form>
+
+    <div id="msg" class="msg" role="status" aria-live="polite" hidden></div>
 
     <div class="nota">
-      <p><strong>Entras en GitLab, no aquí.</strong> Este panel nunca ve tu contraseña: te
-      redirige a <code>project.comsatel.com.pe</code> y solo recibe un permiso de lectura
-      que puedes revocar cuando quieras desde tus aplicaciones autorizadas en GitLab.</p>
-      <p>Cada persona ve únicamente sus propios datos.</p>
+      <p>El token se comprueba contra GitLab y viaja <strong>cifrado dentro de tu
+      cookie de sesión</strong>: no se guarda en ningún otro sitio. La sesión dura
+      8 horas; cerrarla no revoca el token, que puedes revocar cuando quieras desde GitLab.</p>
+      <p>Con <code>read_api</code> el panel puede leer, nunca modificar. Cada persona ve
+      únicamente sus propios datos.</p>
     </div>
   </main>
   <footer class="pie">© 2026 · Creado por nrolando</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const campo = $("token");
+const msg = $("msg");
+
+function aviso(texto, clase) {
+  msg.hidden = false;
+  msg.className = "msg alert alert-" + clase;
+  msg.textContent = texto; // textContent: el mensaje nunca se interpreta como HTML
+}
+
+function ocupado(si) {
+  $("entrar").disabled = si;
+  $("entrar-txt").textContent = si ? "Verificando…" : "Entrar";
+}
+
+$("ver").addEventListener("click", () => {
+  const visible = campo.type === "text";
+  campo.type = visible ? "password" : "text";
+  $("ver").textContent = visible ? "Ver" : "Ocultar";
+  $("ver").setAttribute("aria-label", visible ? "Mostrar el token" : "Ocultar el token");
+  campo.focus();
+});
+
+$("formulario").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const token = campo.value.trim();
+  if (!token) { aviso("Pega tu token de acceso personal para continuar.", "danger"); campo.focus(); return; }
+
+  ocupado(true);
+  msg.hidden = true;
+  try {
+    const r = await fetch("/api/auth/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      aviso(data.error || "No se pudo validar el token. Revisa que tenga el scope read_api y no haya caducado.", "danger");
+      ocupado(false);
+      campo.focus();
+      return;
+    }
+    aviso(`Conectado como @${data.username}. Abriendo el panel…`, "success");
+    location.href = "/";
+  } catch (error) {
+    aviso("Sin conexión con el panel. Revisa tu red e inténtalo de nuevo.", "danger");
+    ocupado(false);
+  }
+});
+
+campo.focus();
+</script>
 </body>
 </html>

@@ -1135,7 +1135,7 @@ async function avisosWeb() {
 
 async function cargarAvisos() {
   try {
-    pintarAvisos(modoSesion === "oauth" ? await avisosWeb() : await pedir("/api/notificaciones"));
+    pintarAvisos(modoSesion === "web" ? await avisosWeb() : await pedir("/api/notificaciones"));
   } catch {
     $("lista-avisos").innerHTML = vacio("No se pudieron leer las notificaciones", "Se reintentará en un minuto.");
   }
@@ -1167,7 +1167,7 @@ document.addEventListener("keydown", (e) => {
 
 $("marcar-leidas").addEventListener("click", async (e) => {
   e.stopPropagation();
-  if (modoSesion === "oauth") {
+  if (modoSesion === "web") {
     const guardados = leerLocal(CLAVE_AVISOS, []).map((a) => ({ ...a, leido: true }));
     guardarLocal(CLAVE_AVISOS, guardados);
     pintarAvisos({ items: guardados, noLeidas: 0 });
@@ -1451,7 +1451,7 @@ aplicarVista();
 let servidorCaido = false;
 
 $("salir").addEventListener("click", async () => {
-  if (modoSesion === "oauth") {
+  if (modoSesion === "web") {
     try { localStorage.removeItem(CLAVE_AVISOS); localStorage.removeItem(CLAVE_ESTADO); } catch {}
     location.href = "/auth/logout";
     return;

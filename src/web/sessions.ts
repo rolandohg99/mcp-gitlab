@@ -15,9 +15,8 @@ export interface Usuario {
 export interface Sesion {
   id: string;
   usuario: Usuario;
-  /** El token vive solo aqui, en memoria del servidor. Nunca viaja al navegador. */
+  /** Token personal: vive solo aqui, en memoria del servidor. Nunca viaja al navegador. */
   accessToken: string;
-  refreshToken?: string;
   client: GitLabClient;
   creada: number;
   ultimoUso: number;
@@ -25,36 +24,14 @@ export interface Sesion {
 
 export class SessionStore {
   private readonly sesiones = new Map<string, Sesion>();
-  /** Estados OAuth pendientes: protegen el callback contra CSRF. */
-  private readonly pendientes = new Map<string, number>();
 
-  crearEstado(): string {
+  abrir(usuario: Usuario, accessToken: string, gitlabUrl: string): Sesion {
     this.limpiar();
-    const estado = randomBytes(16).toString("hex");
-    this.pendientes.set(estado, Date.now());
-    return estado;
-  }
-
-  consumirEstado(estado: string): boolean {
-    const creado = this.pendientes.get(estado);
-    if (creado === undefined) return false;
-    this.pendientes.delete(estado);
-    // Diez minutos para completar el login; pasado eso, se rehace.
-    return Date.now() - creado < 10 * 60 * 1000;
-  }
-
-  abrir(
-    usuario: Usuario,
-    accessToken: string,
-    gitlabUrl: string,
-    refreshToken?: string
-  ): Sesion {
     const sesion: Sesion = {
       id: randomBytes(24).toString("hex"),
       usuario,
       accessToken,
-      refreshToken,
-      client: new GitLabClient(gitlabUrl, accessToken, "bearer"),
+      client: new GitLabClient(gitlabUrl, accessToken, "pat"),
       creada: Date.now(),
       ultimoUso: Date.now()
     };
@@ -85,9 +62,6 @@ export class SessionStore {
     const ahora = Date.now();
     for (const [id, s] of this.sesiones) {
       if (ahora - s.ultimoUso > TTL_MS) this.sesiones.delete(id);
-    }
-    for (const [estado, creado] of this.pendientes) {
-      if (ahora - creado > 10 * 60 * 1000) this.pendientes.delete(estado);
     }
   }
 
