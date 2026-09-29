@@ -1,6 +1,6 @@
 {
-  "version": "0.2.3",
+  "version": "0.2.4",
   "url": "https://project.comsatel.com.pe/comsatel/development/products/collaboration/-/wikis/panel-desarrollo",
-  "notas": "Todos los productos detectados por tu actividad, nuevo diseño azul marino con menú lateral y bugs abiertos y cerrados.",
-  "publicada": "2026-09-27"
+  "notas": "Filtros de búsqueda: el producto filtra tareas, merge requests, To-Do, bugs y pipelines, y cada tarjeta tiene su propio buscador.",
+  "publicada": "2026-09-29"
 }
