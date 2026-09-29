@@ -9,7 +9,8 @@ import type { Usuario } from "./sessions.js";
 
 export type ResultadoToken =
   | { ok: true; usuario: Usuario; token: string }
-  | { ok: false; error: string };
+  /** motivo "red": GitLab no respondió (sin VPN, caído); el resto, el token. */
+  | { ok: false; error: string; motivo?: "red" };
 
 /**
  * Comprueba el token contra GitLab. `crear` construye el cliente (inyectable
@@ -47,7 +48,7 @@ export async function validarToken(
       // Al registro del servidor, para diagnosticar (DNS, red, certificado); nunca el token.
       const causa = (error.details as { cause?: { code?: string; message?: string } } | undefined)?.cause;
       console.error(`[login] GitLab inalcanzable: ${error.message}${causa ? ` (${causa.code ?? ""} ${causa.message ?? ""})` : ""}`);
-      return { ok: false, error: "No se pudo conectar con GitLab. Inténtalo de nuevo en un momento." };
+      return { ok: false, error: "No se pudo conectar con GitLab. Inténtalo de nuevo en un momento.", motivo: "red" };
     }
     return { ok: false, error: `GitLab no aceptó el token: ${(error as Error).message}` };
   }

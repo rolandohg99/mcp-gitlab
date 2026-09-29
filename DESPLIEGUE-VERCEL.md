@@ -1,47 +1,58 @@
 # Desplegar el panel en Vercel
 
-El panel web corre en Vercel como funciones serverless, que necesitan llegar
-a GitLab desde internet.
+La red de Comsatel bloquea GitLab desde fuera: vista desde Vercel,
+`project.comsatel.com.pe` responde con una página del gateway (`503`, "La página
+no se encuentra disponible para acceso desde la red externa"). Por eso **Vercel
+no consulta GitLab**: solo sirve los archivos de `public/`, y es el navegador de
+cada persona —conectado a la **VPN**— el que llama a GitLab.
 
-> **Estado al 2026-09-28: bloqueado.** Desde Vercel, `project.comsatel.com.pe`
-> responde con una página del gateway de Comsatel — `503` y "La página no se
-> encuentra disponible para acceso desde la red externa" —, no con la API de
-> GitLab. El login falla con "No se pudo conectar con GitLab" (en el registro
-> de la función: `HPE_INVALID_HEADER_TOKEN`). Mientras la red de Comsatel no
-> permita ese acceso, la versión web debe alojarse dentro de la red.
+```
+Navegador (VPN) ──► GitLab de Comsatel
+     ▲
+Vercel: solo archivos estáticos (public/)
+```
+
+GitLab permite estas llamadas desde el navegador (CORS con `PRIVATE-TOKEN`,
+`Access-Control-Allow-Origin: *`), verificado el 2026-09-28.
 
 ## 1. Cómo entra cada persona
 
-Con **su propio token de acceso personal** de GitLab, como en la app de
-escritorio: en la pantalla de login se explica cómo crearlo (Preferences →
-Access Tokens, scope `read_api`). No hay que registrar ninguna aplicación en
-GitLab. Una llave SSH no sirve: solo autentica git, no la API.
+Con **su propio token de acceso personal** (scope `read_api`); la pantalla de
+login explica cómo crearlo. El token se valida contra GitLab desde el navegador
+y se guarda **solo en esa pestaña** (`sessionStorage`): al cerrarla hay que
+volver a pegarlo (el gestor de contraseñas del navegador puede rellenarlo).
+Cerrar sesión lo borra; no lo revoca. Una llave SSH no sirve: solo autentica
+git, no la API.
 
-## 2. Variables de entorno en Vercel
+**Permiso de red local.** Dentro de la VPN, `project.comsatel.com.pe` resuelve a
+una IP privada (`192.168.1.251`). Chrome y Edge (Local Network Access) piden
+permiso la primera vez que una web pública accede a la red local: hay que
+**permitirlo**. Si se deniega, o una política de la empresa lo impide, el
+navegador bloquea la petición (en la consola: `net::ERR_BLOCKED_BY_CLIENT` o
+similar). El permiso se puede cambiar en el candado de la barra de direcciones.
 
-En **Settings → Environment Variables** (o `npx vercel env add NOMBRE production`):
+Sin VPN o sin ese permiso, el login y el panel dicen: "No se alcanza GitLab.
+¿Estás conectado a la VPN? Si el navegador pregunta si este sitio puede acceder
+a tu red local, permítelo."
 
-| Variable | Valor |
-|---|---|
-| `GITLAB_URL` | `https://project.comsatel.com.pe` |
-| `SESSION_SECRET` | 32+ caracteres aleatorios |
+## 2. Qué construye Vercel
 
-Genera el secreto de sesión con:
+`vercel.json`: `buildCommand` = `npm run build:web`, que empaqueta
+`src/web/navegador.ts` en `public/panel.js` con esbuild (la misma lógica que
+usan el escritorio y `npm run web`). No hay funciones, ni `SESSION_SECRET`, ni
+variables obligatorias: `GITLAB_URL` es opcional (por defecto
+`https://project.comsatel.com.pe`) y se fija al compilar.
 
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-```
-
-**Si cambias `SESSION_SECRET`, todas las sesiones abiertas dejan de ser
-válidas** — la cookie deja de poder descifrarse. Es la forma de expulsar a
-todo el mundo si hiciera falta.
+`index.html` y `login.html` detectan el modo: si `/api/me` da 404 (como en
+Vercel), usan `panel.js`; con servidor (escritorio, `npm run web`) siguen como
+siempre.
 
 ## 3. Desplegar
 
 ### Opción A — desde tu máquina
 
 ```bash
-npx vercel --prod
+npx vercel --prod --yes
 ```
 
 La primera vez crea el proyecto y genera `.vercel/project.json` (ignorado por
@@ -50,20 +61,16 @@ git) con los identificadores que necesita el CI.
 ### Opción B — desde un repo, con GitLab CI
 
 **La integración directa de Vercel con Git no sirve con GitLab autoalojado**:
-necesita configurar webhooks y clonar el repositorio, y eso solo funciona con
-gitlab.com. La propia documentación de Vercel remite a GitLab Pipelines para
-instancias self-managed.
-
-El archivo [.gitlab-ci.yml](.gitlab-ci.yml) ya implementa esa vía:
+necesita webhooks y clonado, y solo funciona con gitlab.com. El archivo
+[.gitlab-ci.yml](.gitlab-ci.yml) construye en el pipeline y sube el resultado:
 
 | Rama | Qué hace |
 |---|---|
 | `main` / `master` | Despliega a producción |
 | `develop`, ramas `*_Feature_*` | Despliega una vista previa |
-| Cualquiera | Verifica tipos antes de desplegar |
+| Cualquiera | Verifica tipos y el paquete antes de desplegar |
 
-Variables a definir en **Settings → CI/CD → Variables**, marcadas *Masked* y
-*Protected*:
+Variables en **Settings → CI/CD → Variables** (*Masked* y *Protected*):
 
 | Variable | De dónde sale |
 |---|---|
@@ -71,46 +78,33 @@ Variables a definir en **Settings → CI/CD → Variables**, marcadas *Masked* y
 | `VERCEL_ORG_ID` | `.vercel/project.json` tras el despliegue local |
 | `VERCEL_PROJECT_ID` | idem |
 
-Sin `VERCEL_TOKEN` definido, los jobs de despliegue **no se ejecutan** en vez de
-fallar — así el repo se puede clonar y usar sin configurar nada.
+Sin `VERCEL_TOKEN`, los jobs de despliegue **no se ejecutan** en vez de fallar.
 
-Detalle que quizá te interese: `vercel build` compila **dentro de tu pipeline** y
-`vercel deploy --prebuilt` sube solo el resultado. **El código fuente nunca llega
-a Vercel.**
+## Cómo se protege el token
 
-## Cómo funciona la sesión
-
-No hay servidor con memoria: en serverless cada petición puede caer en una
-instancia distinta y efímera. El token personal viaja **cifrado con AES-256-GCM
-dentro de la propia cookie**, que es `HttpOnly`, `Secure` y `SameSite=Lax`.
-
-- El login (`POST /api/auth/token`) valida el token contra GitLab y solo se
-  acepta desde la propia página (se comprueba `Origin`).
-- Cerrar sesión borra la cookie; **no revoca el token**, que es de la persona.
-
-- El navegador solo ve bytes opacos; sin `SESSION_SECRET` no puede leerlos.
-- GCM detecta cualquier manipulación: una cookie alterada se rechaza.
-- Caduca a las 8 horas, validado al descifrar y no solo por el navegador.
-- Ocupa ~236 bytes, muy por debajo del límite de 4 KB.
+- Solo en `sessionStorage` de la pestaña: nunca en cookies, `localStorage`, la
+  URL ni registros.
+- Cabecera **Content-Security-Policy** en todas las rutas: el navegador solo
+  deja conectar con la propia página y con `https://project.comsatel.com.pe`, y
+  cargar imágenes propias. Aunque se inyectara código, no podría enviar el token
+  a otro servidor.
+- `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, `nosniff`.
+- Todo texto que llega de GitLab se escapa antes de mostrarse.
 
 ## Las notificaciones
 
-El servidor no guarda historial. El navegador manda el estado de la vuelta
-anterior (guardado en `localStorage`), el servidor compara con la misma función
-que usa la app de escritorio y devuelve solo lo nuevo. La lista de avisos vive
-en el navegador y se borra al cerrar sesión.
-
-Consecuencia: el historial es **por navegador**. Si entras desde otro equipo,
-empieza vacío.
+Sin servidor, el navegador guarda el estado de la vuelta anterior en
+`localStorage`, compara con la misma función que la app de escritorio y muestra
+solo lo nuevo. El historial es **por navegador** y se borra al cerrar sesión.
 
 ## Lo que conviene tener presente
 
-**La URL de Vercel es pública.** Cualquiera en internet llega a la pantalla de
-login. Los datos siguen protegidos —hay que autenticarse contra GitLab y cada
-quien ve solo lo suyo— pero el panel deja de estar oculto tras la red interna.
+**La URL de Vercel es pública**, pero sin VPN no sirve de nada: la página no
+llega a GitLab. Con VPN, cada quien ve solo lo suyo con su propio token.
+
+**Cada navegador hace sus consultas**: unas 100–200 cada 5 minutos por persona
+con el panel abierto, igual que hacía el servidor.
 
 **El despliegue no incluye nada de la app de escritorio**: `.vercelignore`
-excluye `src/desktop/`, `dist/`, `release*/` y el `.env`.
-
-**La instalación usa `--ignore-scripts`** para que Vercel no descargue el
-binario de Electron (150 MB inútiles en un despliegue web).
+excluye `src/desktop/`, `dist/`, `release*/` y el `.env`. La instalación usa
+`--ignore-scripts` para no descargar el binario de Electron.

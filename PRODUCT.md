@@ -35,8 +35,10 @@ de 9 h de Comsatel.
   macOS pendiente de compilar en un Mac), servidor local y web en Vercel.
 - En todas, cada persona entra con su propio token de acceso personal de GitLab
   (scope `read_api`).
-- La app de escritorio entra con un token personal `read_api`, guardado cifrado
-  en el equipo; la web usa una cookie de sesión cifrada.
+- La app de escritorio guarda el token cifrado en el equipo. La web en Vercel
+  no tiene servidor que llegue a GitLab (la red de Comsatel lo bloquea desde
+  fuera): el navegador de cada persona, conectado a la VPN, consulta GitLab
+  directamente y guarda el token solo en la pestaña.
 - Notificaciones cada 5 minutos: issue nuevo, MR para revisar, aprobado o
   fusionado, pipeline roto, despliegues, To-Do, horas sin registrar y nueva
   versión de la app.
