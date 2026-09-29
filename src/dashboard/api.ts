@@ -1,6 +1,6 @@
 import type { Config } from "../config.js";
 import { encodeProject, GitLabClient, GitLabError } from "../gitlab/client.js";
-import { detectarProductos, raizProductos, type Producto } from "./productos.js";
+import { detectarProductos, productoDe, raizProductos, type Producto } from "./productos.js";
 import { mapLimit } from "./proyectos.js";
 import { pipelinesVigilados } from "./snapshot.js";
 
@@ -31,6 +31,8 @@ export interface IssueRow {
   milestone: string | null;
   updated_at: string;
   project: string;
+  /** Slug del producto del repo (para filtrar en el panel); null fuera de products. */
+  producto: string | null;
   author: string;
   assignees: string[];
 }
@@ -43,6 +45,7 @@ export interface MrRow {
   target_branch: string;
   updated_at: string;
   project: string;
+  producto: string | null;
   draft: boolean;
   has_conflicts: boolean;
   author: string;
@@ -64,6 +67,7 @@ function toIssue(raw: any): IssueRow {
     milestone: raw.milestone?.title ?? null,
     updated_at: raw.updated_at,
     project: projectFromUrl(raw.web_url),
+    producto: productoDe(projectFromUrl(raw.web_url)),
     author: raw.author?.username ?? "",
     assignees: (raw.assignees ?? []).map((a: any) => a.username)
   };
@@ -78,6 +82,7 @@ function toMr(raw: any): MrRow {
     target_branch: raw.target_branch,
     updated_at: raw.updated_at,
     project: projectFromUrl(raw.web_url),
+    producto: productoDe(projectFromUrl(raw.web_url)),
     draft: Boolean(raw.draft ?? raw.work_in_progress),
     has_conflicts: Boolean(raw.has_conflicts),
     author: raw.author?.username ?? ""
@@ -130,6 +135,7 @@ export class DashboardApi {
           accion: t.action_name,
           titulo: t.target?.title ?? "(sin titulo)",
           proyecto: t.project?.path_with_namespace ?? "",
+          producto: productoDe(t.project?.path_with_namespace ?? "", raiz),
           autor: t.author?.username ?? "",
           url: t.target_url,
           created_at: t.created_at
