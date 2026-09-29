@@ -174,6 +174,18 @@
   .seg-n.hay-fallos { color: var(--danger); font-weight: 600; }
   .seg-n.hay-curso { color: var(--warning); font-weight: 600; }
   .buscar { width: 220px; }
+  .buscar-tarjeta { width: 160px; }
+  @media (max-width: 639px) { .buscar-tarjeta { width: 100%; } }
+
+  /* Barra de filtros global: el producto filtra todas las listas a la vez. */
+  .filtros {
+    display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .filtros-titulo { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 600; font-size: var(--text-sm); }
+  .filtros-titulo svg { color: var(--primary); }
+  .filtros label { color: var(--text-muted); font-size: var(--text-xs); }
+  .filtros-estado { color: var(--text-muted); font-size: var(--text-xs); }
 
   /* overflow: clip y no hidden: recorta las esquinas sin romper la cabecera sticky. */
   .pipes { overflow: clip; --n-env: 0; }
@@ -519,6 +531,9 @@
   <symbol id="i-calendario" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>
   </symbol>
+  <symbol id="i-buscar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+  </symbol>
   <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M9 6l6 6-6 6"/>
   </symbol>
@@ -611,12 +626,24 @@
     <div class="card-body" id="horas-detalle"></div>
   </section>
 
+  <section class="card bloque filtros" aria-label="Filtros" data-vistas="inicio tareas">
+    <span class="filtros-titulo"><svg width="16" height="16" aria-hidden="true"><use href="#i-buscar"/></svg>Filtros</span>
+    <label for="f-producto">Producto</label>
+    <select id="f-producto" class="field field-sm">
+      <option value="">Todos los productos</option>
+    </select>
+    <span class="spacer"></span>
+    <span class="filtros-estado" id="filtros-estado" aria-live="polite"></span>
+    <button type="button" id="limpiar-filtros" class="btn btn-sm" hidden>Limpiar filtros</button>
+  </section>
+
   <div class="tablero">
     <section class="card" aria-labelledby="h-asig" data-vistas="inicio tareas" data-area="tareas">
       <div class="card-head">
         <h2 class="card-title" id="h-asig"><svg width="18" height="18" aria-hidden="true"><use href="#i-issue"/></svg>Mis tareas</h2>
         <span class="chip-n" id="c-assigned"></span>
         <span class="spacer"></span>
+        <label class="visually-hidden" for="buscar-assigned">Buscar en mis tareas</label><input id="buscar-assigned" class="field field-sm buscar-tarjeta" data-busca="assigned" type="search" placeholder="Buscar…" autocomplete="off" spellcheck="false">
         <a class="ver-todo" href="#tareas">Ver todas <svg width="14" height="14" aria-hidden="true"><use href="#i-chevron"/></svg></a>
       </div>
       <div class="card-body" id="assigned"></div>
@@ -645,22 +672,22 @@
 
     <div class="par" data-vistas="inicio tareas" data-area="mrs">
       <section class="card" aria-labelledby="h-rev" data-vistas="inicio tareas">
-        <div class="card-head"><h2 class="card-title" id="h-rev">Merge requests esperando mi revisión</h2><span class="chip-n" id="c-review"></span></div>
+        <div class="card-head"><h2 class="card-title" id="h-rev">Merge requests esperando mi revisión</h2><span class="chip-n" id="c-review"></span><span class="spacer"></span><label class="visually-hidden" for="buscar-review">Buscar en merge requests por revisar</label><input id="buscar-review" class="field field-sm buscar-tarjeta" data-busca="review" type="search" placeholder="Buscar…" autocomplete="off" spellcheck="false"></div>
         <div class="card-body" id="review"></div>
       </section>
       <section class="card" aria-labelledby="h-mrs" data-vistas="inicio tareas">
-        <div class="card-head"><h2 class="card-title" id="h-mrs">Mis merge requests abiertos</h2><span class="chip-n" id="c-mrs"></span></div>
+        <div class="card-head"><h2 class="card-title" id="h-mrs">Mis merge requests abiertos</h2><span class="chip-n" id="c-mrs"></span><span class="spacer"></span><label class="visually-hidden" for="buscar-mrs">Buscar en mis merge requests</label><input id="buscar-mrs" class="field field-sm buscar-tarjeta" data-busca="mrs" type="search" placeholder="Buscar…" autocomplete="off" spellcheck="false"></div>
         <div class="card-body" id="mrs"></div>
       </section>
     </div>
 
     <div class="par" data-vistas="inicio tareas" data-area="bajo">
       <section class="card" aria-labelledby="h-bugs" data-vistas="inicio">
-        <div class="card-head"><h2 class="card-title" id="h-bugs"><svg width="18" height="18" aria-hidden="true"><use href="#i-bicho"/></svg>Bugs por producto</h2></div>
+        <div class="card-head"><h2 class="card-title" id="h-bugs"><svg width="18" height="18" aria-hidden="true"><use href="#i-bicho"/></svg>Bugs por producto</h2><span class="spacer"></span><label class="visually-hidden" for="buscar-bugs">Buscar estado de bug</label><input id="buscar-bugs" class="field field-sm buscar-tarjeta" data-busca="bugs" type="search" placeholder="Buscar…" autocomplete="off" spellcheck="false"></div>
         <div id="bugs"></div>
       </section>
       <section class="card" aria-labelledby="h-todos" data-vistas="inicio tareas">
-        <div class="card-head"><h2 class="card-title" id="h-todos"><svg width="18" height="18" aria-hidden="true"><use href="#i-todo"/></svg>Pendientes (To-Do de GitLab)</h2><span class="chip-n" id="c-todos"></span></div>
+        <div class="card-head"><h2 class="card-title" id="h-todos"><svg width="18" height="18" aria-hidden="true"><use href="#i-todo"/></svg>Pendientes (To-Do de GitLab)</h2><span class="chip-n" id="c-todos"></span><span class="spacer"></span><label class="visually-hidden" for="buscar-todos">Buscar en pendientes</label><input id="buscar-todos" class="field field-sm buscar-tarjeta" data-busca="todos" type="search" placeholder="Buscar…" autocomplete="off" spellcheck="false"></div>
         <div class="card-body" id="todos"></div>
       </section>
     </div>
@@ -719,13 +746,22 @@ function vacio(titulo, detalle) {
 function cargando(el, filas) { el.innerHTML = esqueleto(filas); }
 
 /** El contador de cada tarjeta: el número solo, sin paréntesis. */
-function contar(el, n) { el.textContent = n ? String(n) : ""; }
+function contar(el, n, total = n) {
+  el.textContent = !total ? "" : n === total ? String(n) : `${n}/${total}`;
+}
+
+/** Con datos pero nada que pase el filtro: se dice, no se finge que no hay nada. */
+function vacioOFiltrado(total, titulo, detalle) {
+  return total
+    ? vacio("Ningún elemento coincide", "Cambia el producto o la búsqueda.")
+    : vacio(titulo, detalle);
+}
 
 /* ---------------------------- paneles ---------------------------- */
 
-function pintarIssues(el, items, contador, vacioTitulo, vacioDetalle) {
-  contar(contador, items.length);
-  if (!items.length) { el.innerHTML = vacio(vacioTitulo, vacioDetalle); return; }
+function pintarIssues(el, items, contador, vacioTitulo, vacioDetalle, total = items.length) {
+  contar(contador, items.length, total);
+  if (!items.length) { el.innerHTML = vacioOFiltrado(total, vacioTitulo, vacioDetalle); return; }
   el.innerHTML = items.map((i) => `
     <a class="item fila" href="${esc(i.web_url)}" target="_blank" rel="noopener">
       <div class="fila-cuerpo">
@@ -740,9 +776,9 @@ function pintarIssues(el, items, contador, vacioTitulo, vacioDetalle) {
     </a>`).join("");
 }
 
-function pintarMrs(el, items, contador, vacioTitulo, vacioDetalle) {
-  contar(contador, items.length);
-  if (!items.length) { el.innerHTML = vacio(vacioTitulo, vacioDetalle); return; }
+function pintarMrs(el, items, contador, vacioTitulo, vacioDetalle, total = items.length) {
+  contar(contador, items.length, total);
+  if (!items.length) { el.innerHTML = vacioOFiltrado(total, vacioTitulo, vacioDetalle); return; }
   el.innerHTML = items.map((m) => `
     <a class="item fila" href="${esc(m.web_url)}" target="_blank" rel="noopener">
       <div class="fila-cuerpo">
@@ -758,9 +794,9 @@ function pintarMrs(el, items, contador, vacioTitulo, vacioDetalle) {
     </a>`).join("");
 }
 
-function pintarBugs(el, bugs) {
+function pintarBugs(el, bugs, hayDatos = false) {
   if (!bugs.some((b) => b.total || b.cerrados)) {
-    el.innerHTML = vacio("Sin bugs", "No se encontraron bugs abiertos ni cerrados en tus productos.");
+    el.innerHTML = vacioOFiltrado(hayDatos, "Sin bugs", "No se encontraron bugs abiertos ni cerrados en tus productos.");
     return;
   }
   // La barra mide solo abiertos, lo que pide trabajo; los cerrados son la cifra
@@ -1000,9 +1036,9 @@ $("buscar-pipes").addEventListener("input", (e) => {
   pintarPipelines($("lista-pipelines"), pipelinesCache);
 });
 
-function pintarTodos(el, todos, contador) {
-  contar(contador, todos.length);
-  if (!todos.length) { el.innerHTML = vacio("Bandeja limpia", "No tienes pendientes en GitLab."); return; }
+function pintarTodos(el, todos, contador, total = todos.length) {
+  contar(contador, todos.length, total);
+  if (!todos.length) { el.innerHTML = vacioOFiltrado(total, "Bandeja limpia", "No tienes pendientes en GitLab."); return; }
   el.innerHTML = todos.map((t) => `
     <a class="item" href="${esc(t.url)}" target="_blank" rel="noopener">
       <div class="item-title">${esc(t.titulo)}</div>
@@ -1390,11 +1426,9 @@ async function cargar() {
     productosDetectados = s.productos || [];
     pintarSubtitulo();
     pintarKpis(s);
-    pintarIssues($("assigned"), s.assigned, $("c-assigned"), "Nada asignado", "Los issues que te asignen aparecerán aquí.");
-    pintarMrs($("review"), s.mrsToReview, $("c-review"), "Nada por revisar", "Cuando te pidan revisar un merge request, aparecerá aquí.");
-    pintarMrs($("mrs"), s.mrsAuthored, $("c-mrs"), "Sin merge requests abiertos", "Los merge requests que abras aparecerán aquí.");
-    pintarBugs($("bugs"), s.bugs);
-    pintarTodos($("todos"), s.todos, $("c-todos"));
+    resumen = s;
+    pintarOpcionesProducto();
+    pintarListas();
 
     const errores = $("errors");
     if (s.errors && s.errors.length) {
@@ -1445,6 +1479,91 @@ function pintarSubtitulo() {
   }
   $("subtitulo").textContent = partes.join(" · ");
 }
+
+/* ---------------------------- filtros ---------------------------- */
+
+/** Último resumen: los filtros se aplican sobre él, sin volver a GitLab. */
+let resumen = null;
+let filtroProducto = "";
+const busquedas = { assigned: "", review: "", mrs: "", todos: "", bugs: "" };
+
+/** Sin mayúsculas ni tildes: "análisis" encuentra "Analisis". */
+function normalizar(s) {
+  return String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function pasa(item, clave, campos) {
+  if (filtroProducto && item.producto !== filtroProducto) return false;
+  const texto = normalizar(busquedas[clave]).trim();
+  return !texto || normalizar(campos.filter(Boolean).join(" ")).includes(texto);
+}
+
+const CAMPOS = {
+  assigned: (i) => [`#${i.iid}`, i.title, i.project, i.milestone, ...(i.labels || [])],
+  review: (m) => [`!${m.iid}`, m.title, m.project, m.source_branch, m.target_branch],
+  mrs: (m) => [`!${m.iid}`, m.title, m.project, m.source_branch, m.target_branch],
+  todos: (t) => [t.titulo, t.accion, t.proyecto, t.autor],
+  bugs: (b) => [b.estado]
+};
+
+function filtrar(lista, clave) {
+  return (lista || []).filter((x) => pasa(x, clave, CAMPOS[clave](x)));
+}
+
+function hayFiltros() {
+  return Boolean(filtroProducto) || Object.values(busquedas).some((v) => v.trim());
+}
+
+function pintarListas() {
+  if (!resumen) return;
+  const s = resumen;
+  const asignados = filtrar(s.assigned, "assigned");
+  const revision = filtrar(s.mrsToReview, "review");
+  const propios = filtrar(s.mrsAuthored, "mrs");
+  const pendientes = filtrar(s.todos, "todos");
+  pintarIssues($("assigned"), asignados, $("c-assigned"), "Nada asignado", "Los issues que te asignen aparecerán aquí.", s.assigned.length);
+  pintarMrs($("review"), revision, $("c-review"), "Nada por revisar", "Cuando te pidan revisar un merge request, aparecerá aquí.", s.mrsToReview.length);
+  pintarMrs($("mrs"), propios, $("c-mrs"), "Sin merge requests abiertos", "Los merge requests que abras aparecerán aquí.", s.mrsAuthored.length);
+  pintarTodos($("todos"), pendientes, $("c-todos"), s.todos.length);
+  const conBugs = (s.bugs || []).some((b) => b.total || b.cerrados);
+  pintarBugs($("bugs"), filtrar(s.bugs, "bugs"), conBugs);
+
+  const activo = hayFiltros();
+  $("limpiar-filtros").hidden = !activo;
+  const visibles = asignados.length + revision.length + propios.length + pendientes.length;
+  const total = s.assigned.length + s.mrsToReview.length + s.mrsAuthored.length + s.todos.length;
+  $("filtros-estado").textContent = activo ? `Mostrando ${visibles} de ${total}` : "";
+}
+
+/** Opciones del selector: los productos detectados. Si el elegido ya no está, vuelve a todos. */
+function pintarOpcionesProducto() {
+  const select = $("f-producto");
+  const productos = productosDetectados || [];
+  if (filtroProducto && !productos.some((p) => p.slug === filtroProducto)) filtroProducto = "";
+  select.innerHTML = '<option value="">Todos los productos</option>' +
+    productos.map((p) => `<option value="${esc(p.slug)}">${esc(p.nombre)}</option>`).join("");
+  select.value = filtroProducto;
+}
+
+$("f-producto").addEventListener("change", (e) => {
+  filtroProducto = e.target.value;
+  pintarListas();
+});
+
+document.querySelectorAll("[data-busca]").forEach((input) => {
+  input.addEventListener("input", () => {
+    busquedas[input.dataset.busca] = input.value;
+    pintarListas();
+  });
+});
+
+$("limpiar-filtros").addEventListener("click", () => {
+  filtroProducto = "";
+  $("f-producto").value = "";
+  for (const clave of Object.keys(busquedas)) busquedas[clave] = "";
+  document.querySelectorAll("[data-busca]").forEach((input) => { input.value = ""; });
+  pintarListas();
+});
 
 /* ---------------------------- vistas y menú ---------------------------- */
 

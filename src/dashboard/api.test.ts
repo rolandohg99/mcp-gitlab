@@ -93,3 +93,39 @@ test("summary: cada estado trae también sus cerrados", async () => {
   assert.ok(s.bugs.every((b) => b.total === 3 && b.cerrados === 7));
   assert.ok(s.bugs.every((b) => b.urlCerrados.includes("state=closed")));
 });
+
+test("summary: issues, MRs y To-Do traen su producto (null fuera de products)", async () => {
+  process.env.DASHBOARD_PRODUCTS = "sigo";
+  const cliente = clienteFalso({});
+  const espia = cliente as unknown as {
+    getAll: (r: string, q?: Record<string, unknown>) => Promise<unknown[]>;
+    get: (r: string, q?: Record<string, unknown>) => Promise<{ data: unknown; headers: Headers }>;
+  };
+  const getAll = espia.getAll;
+  const get = espia.get;
+  const url = (p: string, tipo: string) => `https://gitlab.test/${p}/-/${tipo}/1`;
+  espia.getAll = async (ruta, q) => {
+    if (ruta === "/issues") {
+      return [
+        { iid: 1, title: "a", web_url: url(`${RAIZ}/sigo/microservices/bff`, "issues") },
+        { iid: 2, title: "b", web_url: url("otro/grupo/repo", "issues") }
+      ];
+    }
+    if (ruta === "/merge_requests") return [{ iid: 3, title: "c", web_url: url(`${RAIZ}/clocatr2/api`, "merge_requests") }];
+    return getAll(ruta, q);
+  };
+  espia.get = async (ruta, q) => {
+    if (ruta === "/todos") {
+      return {
+        data: [{ id: 9, action_name: "assigned", target: { title: "d" }, project: { path_with_namespace: `${RAIZ}/sigo/web` } }],
+        headers: new Headers()
+      };
+    }
+    return get(ruta, q);
+  };
+
+  const s = await api(cliente).summary("ana");
+  assert.deepEqual(s.assigned.map((i) => i.producto), ["sigo", null]);
+  assert.deepEqual(s.mrsAuthored.map((m) => m.producto), ["clocatr2"]);
+  assert.deepEqual(s.todos.map((t) => t.producto), ["sigo"]);
+});
