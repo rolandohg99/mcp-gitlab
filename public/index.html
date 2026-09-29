@@ -186,6 +186,8 @@
   .filtros-titulo svg { color: var(--primary); }
   .filtros label { color: var(--text-muted); font-size: var(--text-xs); }
   .filtros-estado { color: var(--text-muted); font-size: var(--text-xs); }
+  /* Cuenta tareas, MRs y To-Do: en la vista de pipelines no se ven. */
+  body[data-vista="pipelines"] .filtros-estado { display: none; }
 
   /* overflow: clip y no hidden: recorta las esquinas sin romper la cabecera sticky. */
   .pipes { overflow: clip; --n-env: 0; }
@@ -626,7 +628,7 @@
     <div class="card-body" id="horas-detalle"></div>
   </section>
 
-  <section class="card bloque filtros" aria-label="Filtros" data-vistas="inicio tareas">
+  <section class="card bloque filtros" aria-label="Filtros" data-vistas="inicio tareas pipelines">
     <span class="filtros-titulo"><svg width="16" height="16" aria-hidden="true"><use href="#i-buscar"/></svg>Filtros</span>
     <label for="f-producto">Producto</label>
     <select id="f-producto" class="field field-sm">
@@ -872,11 +874,16 @@ const ICONO_ENTORNO = {
 
 const CLAVE_PLEGADAS = "panel-sigo:carpetas-plegadas";
 let pipelinesCache = [];
+/** Hasta que llegan, repintar mostraría "sin repositorios" en vez del esqueleto. */
+let pipelinesCargados = false;
 let filtroPipes = "todos";
 let busquedaPipes = "";
 
-function pintarPipelines(el, rows) {
-  pipelinesCache = rows;
+function pintarPipelines(el, todas) {
+  pipelinesCache = todas;
+  pipelinesCargados = true;
+  // El producto de la barra de filtros también manda aquí; el resto, sobre lo que queda.
+  const rows = filtroProducto ? todas.filter((p) => p.producto === filtroProducto) : todas;
   const problemas = rows.filter(ES_PROBLEMA).length;
   const enCurso = rows.filter(EN_CURSO).length;
 
@@ -891,6 +898,10 @@ function pintarPipelines(el, rows) {
   $("f-curso").textContent = enCurso;
   $("f-curso").classList.toggle("hay-curso", enCurso > 0);
 
+  if (!rows.length && todas.length) {
+    el.innerHTML = vacio("Ningún repositorio de este producto tiene pipelines", "Cambia el producto en los filtros.");
+    return;
+  }
   if (!rows.length) {
     el.innerHTML = productosDetectados && !productosDetectados.length
       ? vacio("No detectamos productos con tu actividad reciente",
@@ -1410,6 +1421,7 @@ async function cargar() {
 
   ["assigned", "review", "mrs", "todos"].forEach((id) => cargando($(id), 3));
   $("lista-pipelines").innerHTML = esqueleto(4);
+  pipelinesCargados = false;
   $("bugs").innerHTML = esqueleto(3);
 
   try {
@@ -1545,9 +1557,14 @@ function pintarOpcionesProducto() {
   select.value = filtroProducto;
 }
 
+function repintarPipelines() {
+  if (pipelinesCargados) pintarPipelines($("lista-pipelines"), pipelinesCache);
+}
+
 $("f-producto").addEventListener("change", (e) => {
   filtroProducto = e.target.value;
   pintarListas();
+  repintarPipelines();
 });
 
 document.querySelectorAll("[data-busca]").forEach((input) => {
@@ -1563,6 +1580,7 @@ $("limpiar-filtros").addEventListener("click", () => {
   for (const clave of Object.keys(busquedas)) busquedas[clave] = "";
   document.querySelectorAll("[data-busca]").forEach((input) => { input.value = ""; });
   pintarListas();
+  repintarPipelines();
 });
 
 /* ---------------------------- vistas y menú ---------------------------- */
